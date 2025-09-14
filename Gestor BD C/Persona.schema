@@ -1,0 +1,4 @@
+Nombre,VARCHAR,50
+Direccion,VARCHAR,50
+Telefono,VARCHAR,50
+Edad,ENTERO,3

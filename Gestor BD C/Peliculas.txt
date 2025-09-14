@@ -1,0 +1,13 @@
+Inception,Christopher Nolan,2010
+Titanic,James Cameron,1997
+Matrix,Lana Wachowski,1999
+Avatar,James Cameron,2009
+Gladiador,Ridley Scott,2000
+Amelie,Jean-Pierre Jeunet,2001
+Interestelar,Christopher Nolan,2014
+Joker,Todd Phillips,2019
+Pulp Fiction,Quentin Tarantino,1994
+La La Land,Damien Chazelle,2016
+El club de la pelea,David Fincher,1999
+28 dias despues,Danny Boyle,2002
+Los pajaros,Alfred Hitchcock,1963

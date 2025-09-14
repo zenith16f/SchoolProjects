@@ -1,0 +1,4 @@
+Nombre,VARCHAR,60
+Precio,ENTERO,10
+Cantidad,ENTERO,5
+Descripcion,VARCHAR,100

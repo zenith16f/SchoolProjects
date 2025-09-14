@@ -1,0 +1,13 @@
+# Compiled codes
+*/compiled/*
+*/compiled/
+*.out
+*.exe
+
+# Images
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.svg
+*.ppm

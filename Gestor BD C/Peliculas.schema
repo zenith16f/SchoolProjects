@@ -1,0 +1,3 @@
+Titulo,VARCHAR,20
+Director,VARCHAR,30
+Año,ENTERO,5

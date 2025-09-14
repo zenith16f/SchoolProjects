@@ -1,0 +1,4 @@
+Nombre,VARCHAR,50
+Raza,VARCHAR,50
+Edad,ENTERO,3
+Sexo,VARCHAR,20
