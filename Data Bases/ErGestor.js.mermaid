@@ -1,0 +1,106 @@
+erDiagram
+    USUARIOS ||--o{ CATEGORIAS : "crea"
+    USUARIOS ||--o{ CUENTAS : "posee"
+    USUARIOS ||--o{ TRANSACCIONES : "registra"
+    USUARIOS ||--o{ PRESUPUESTOS : "define"
+    USUARIOS ||--o{ METAS_AHORRO : "establece"
+    USUARIOS ||--o{ TRANSFERENCIAS : "realiza"
+    USUARIOS ||--o{ RECORDATORIOS : "programa"
+    
+    CATEGORIAS ||--o{ TRANSACCIONES : "clasifica"
+    CATEGORIAS ||--o{ PRESUPUESTOS : "limita"
+    CATEGORIAS ||--o{ RECORDATORIOS : "asocia"
+    
+    CUENTAS ||--o{ TRANSACCIONES : "contiene"
+    CUENTAS ||--o{ TRANSFERENCIAS : "es_origen"
+    CUENTAS ||--o{ TRANSFERENCIAS : "es_destino"
+    
+    USUARIOS {
+        int id_usuario PK "Identificador único"
+        varchar nombre "Nombre completo"
+        varchar email UK "Correo electrónico único"
+        varchar password "Contraseña encriptada"
+        datetime fecha_registro "Fecha de registro"
+        boolean activo "Estado de la cuenta"
+    }
+    
+    CATEGORIAS {
+        int id_categoria PK "Identificador único"
+        int id_usuario FK "Usuario propietario"
+        varchar nombre "Nombre de la categoría"
+        enum tipo "ingreso o gasto"
+        text descripcion "Descripción detallada"
+        varchar color "Color en hexadecimal"
+        varchar icono "Nombre del icono"
+    }
+    
+    CUENTAS {
+        int id_cuenta PK "Identificador único"
+        int id_usuario FK "Usuario propietario"
+        varchar nombre "Nombre de la cuenta"
+        enum tipo "efectivo banco tarjeta ahorro"
+        decimal saldo_inicial "Saldo al crear cuenta"
+        decimal saldo_actual "Saldo actualizado"
+        varchar moneda "Código de moneda"
+        boolean activa "Estado de la cuenta"
+        datetime fecha_creacion "Fecha de creación"
+    }
+    
+    TRANSACCIONES {
+        int id_transaccion PK "Identificador único"
+        int id_usuario FK "Usuario propietario"
+        int id_cuenta FK "Cuenta asociada"
+        int id_categoria FK "Categoría de transacción"
+        enum tipo "ingreso o gasto"
+        decimal monto "Cantidad de dinero"
+        text descripcion "Descripción breve"
+        date fecha "Fecha de la transacción"
+        datetime fecha_registro "Fecha de registro en sistema"
+        text notas "Notas adicionales"
+    }
+    
+    PRESUPUESTOS {
+        int id_presupuesto PK "Identificador único"
+        int id_usuario FK "Usuario propietario"
+        int id_categoria FK "Categoría presupuestada"
+        decimal monto_limite "Límite de gasto"
+        enum periodo "semanal mensual anual"
+        date fecha_inicio "Inicio del periodo"
+        date fecha_fin "Fin del periodo"
+        boolean activo "Estado del presupuesto"
+    }
+    
+    METAS_AHORRO {
+        int id_meta PK "Identificador único"
+        int id_usuario FK "Usuario propietario"
+        varchar nombre "Nombre de la meta"
+        text descripcion "Descripción de la meta"
+        decimal monto_objetivo "Cantidad a alcanzar"
+        decimal monto_actual "Cantidad ahorrada"
+        date fecha_inicio "Inicio de la meta"
+        date fecha_limite "Fecha límite opcional"
+        boolean completada "Estado de completitud"
+    }
+    
+    TRANSFERENCIAS {
+        int id_transferencia PK "Identificador único"
+        int id_usuario FK "Usuario propietario"
+        int id_cuenta_origen FK "Cuenta de origen"
+        int id_cuenta_destino FK "Cuenta de destino"
+        decimal monto "Cantidad transferida"
+        date fecha "Fecha de transferencia"
+        text descripcion "Concepto de transferencia"
+        datetime fecha_registro "Fecha de registro"
+    }
+    
+    RECORDATORIOS {
+        int id_recordatorio PK "Identificador único"
+        int id_usuario FK "Usuario propietario"
+        int id_categoria FK "Categoría opcional"
+        varchar titulo "Título del recordatorio"
+        text descripcion "Descripción detallada"
+        decimal monto "Monto opcional"
+        date fecha_recordatorio "Fecha del recordatorio"
+        enum frecuencia "unico diario semanal mensual anual"
+        boolean activo "Estado del recordatorio"
+    }
