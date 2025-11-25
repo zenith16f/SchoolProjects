@@ -11,3 +11,12 @@
 *.gif
 *.svg
 *.ppm
+
+# Cache files
+*.cache
+
+# Environment variables
+*.env
+
+# Cache folders
+*/__pycache__
