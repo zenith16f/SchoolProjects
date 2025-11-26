@@ -1,6 +1,72 @@
 <script setup lang="ts">
 import { BookOpen, Calculator, Zap } from "lucide-vue-next";
-import { computed, ref } from "vue";
+// Importamos 'watch' para que la directiva se actualice cuando la expresión cambie
+import { computed, ref, watch } from "vue"; 
+
+// --- CORRECCIÓN CRÍTICA: Definición de Directiva KaTeX ---
+// Importamos solo el CSS de KaTeX
+import 'katex/dist/katex.min.css';
+
+// Estado para rastrear si KaTeX está cargado (inicialmente falso)
+const isKatexLoaded = ref(false); 
+
+// Definimos la directiva personalizada. 
+const vKatex = (el: HTMLElement, binding: any) => {
+    const expression = binding.value.expression || binding.value;
+    const options = binding.value.options || {};
+
+    if (!isKatexLoaded.value || typeof (window as any).katex === 'undefined') {
+         el.innerText = 'Cargando KaTeX...';
+         // Usamos un marcador de error más amigable mientras carga
+         return;
+    }
+
+    try {
+        (window as any).katex.render(expression, el, {
+            throwOnError: false, 
+            ...options 
+        });
+    } catch (e) {
+        el.innerText = `Error LaTeX: ${(e as Error).message}`;
+        console.error("KaTeX Render Error:", e);
+    }
+};
+
+// Función para cargar KaTeX dinámicamente desde CDN
+function loadKatexScript() {
+    if (typeof (window as any).katex !== 'undefined' || isKatexLoaded.value) {
+        isKatexLoaded.value = true;
+        return;
+    }
+
+    const script = document.createElement('script');
+    // Usamos la última versión estable de KaTeX disponible en CDN
+    script.src = 'https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js';
+    script.onload = () => {
+        // Marcamos como cargado y forzamos la actualización de la vista
+        isKatexLoaded.value = true;
+        console.log("KaTeX loaded successfully.");
+    };
+    script.onerror = () => {
+        console.error("Failed to load KaTeX script from CDN.");
+    };
+    document.head.appendChild(script);
+}
+
+// Llama a la función de carga al inicio de la aplicación
+loadKatexScript();
+
+// --- CORRECCIÓN AÑADIDA: Forzar re-renderizado después de cargar KaTeX ---
+watch(isKatexLoaded, (newValue) => {
+    // Si KaTeX acaba de cargarse (newValue es true) y ya tenemos resultados, forzamos un update.
+    if (newValue && result.value !== null) {
+        // Clonamos el objeto result.value para forzar que Vue lo considere cambiado
+        // y re-ejecute las directivas v-katex
+        result.value = { ...result.value };
+    }
+});
+// -----------------------------------------------------------------
+
 
 const a = ref<string>("");
 const b = ref<string>("");
@@ -34,31 +100,55 @@ async function handleSolve(stepByStep = false) {
   showStepByStep.value = stepByStep;
   currentStep.value = 0;
 
-  try {
-    const response = await fetch(`http://localhost:5000/solve`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        a: parseFloat(a.value),
-        b: parseFloat(b.value),
-        c: parseFloat(c.value),
-      }),
-    });
+  // Implementar backoff para reintentos de conexión
+  const MAX_RETRIES = 3;
+  let retries = 0;
+  
+  while (retries < MAX_RETRIES) {
+    try {
+      const response = await fetch(`http://localhost:5000/solve`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          a: parseFloat(a.value),
+          b: parseFloat(b.value),
+          c: parseFloat(c.value),
+        }),
+      });
 
-    if (!response.ok) throw new Error("Error al resolver la ecuación");
+      if (!response.ok) {
+        const errData = await response.json();
+        throw new Error(errData.error || `Error al resolver la ecuación (Código: ${response.status})`);
+      }
 
-    const data = await response.json();
-    const discriminantType = getDiscriminantType(a.value, b.value, c.value);
+      const data = await response.json();
+      const discriminantType = getDiscriminantType(a.value, b.value, c.value);
 
-    result.value = {
-      ...data,
-      discriminantType,
-    };
-  } catch (err: any) {
-    error.value = "Error al conectar con el servidor: " + err.message;
-    console.error(err);
-  } finally {
-    loading.value = false;
+      // El backend ahora devuelve 'ecuacion_original' en lugar de 'solucion_original'
+      data.solucion_original = data.ecuacion_original;
+      delete data.ecuacion_original;
+
+
+      result.value = {
+        ...data,
+        discriminantType,
+      };
+      
+      // Salir del bucle si es exitoso
+      break; 
+
+    } catch (err: any) {
+      if (retries < MAX_RETRIES - 1) {
+        retries++;
+        // Espera exponencial antes de reintentar
+        await new Promise(resolve => setTimeout(resolve, 1000 * (2 ** retries))); 
+      } else {
+        error.value = "Error al conectar con el servidor: " + err.message;
+        console.error(err);
+      }
+    } finally {
+      loading.value = false;
+    }
   }
 }
 
@@ -88,7 +178,7 @@ const steps = computed(() => {
     s.push({
       title: "Raíces de la Ecuación",
       content: "Resolvemos la ecuación característica",
-      data: `${result.value.raices}`,
+      data: result.value.raices, // Ya viene formateado con \quad, etc.
       color: "blue",
     });
 
@@ -96,7 +186,8 @@ const steps = computed(() => {
     s.push({
       title: "Tipo de Raíces",
       content: "Clasificamos el tipo de raíces obtenidas",
-      data: result.value.tipo_raices,
+      // Eliminamos el $$ y usamos la prop expression del v-katex
+      data: `\\text{Tipo de raíces: } \\mathbf{${result.value.tipo_raices}}`, 
       color: "cyan",
     });
 
@@ -104,7 +195,7 @@ const steps = computed(() => {
     s.push({
       title: "Soluciones Linealmente Independientes",
       content: "Determinamos las soluciones linealmente independientes",
-      data: `y₁ = ${result.value.soluciones_li.y1}\ny₂ = ${result.value.soluciones_li.y2}`,
+      data: `y_1 = ${result.value.soluciones_li.y1} \\newline y_2 = ${result.value.soluciones_li.y2}`,
       color: "orange",
     });
 
@@ -209,6 +300,8 @@ function prevStep() {
                 type="number"
                 step="any"
                 v-model="a"
+                min="-99"
+                max="99"
                 placeholder="Ej: 1"
                 class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg text-lg focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
               />
@@ -223,6 +316,8 @@ function prevStep() {
                 step="any"
                 v-model="b"
                 placeholder="Ej: -5"
+                min="-99"
+                max="99"
                 class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg text-lg focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
               />
             </div>
@@ -236,6 +331,8 @@ function prevStep() {
                 step="any"
                 v-model="c"
                 placeholder="Ej: 6"
+                min="-99"
+                max="99"
                 class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg text-lg focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
               />
             </div>
@@ -306,11 +403,11 @@ function prevStep() {
                   `border-${steps[currentStep].color}-200`,
                 ]"
               >
-                <p
-                  class="text-xl font-mono font-semibold text-gray-800 whitespace-pre-line"
-                >
-                  {{ steps[currentStep].data }}
-                </p>
+                <!-- **USO DE DIRECTIVA v-katex AQUÍ** -->
+                <div 
+                  v-katex="{ expression: steps[currentStep].data, options: { displayMode: true } }" 
+                  class="text-center"
+                ></div>
               </div>
 
               <div
@@ -358,9 +455,8 @@ function prevStep() {
               <p class="text-sm font-semibold text-gray-600">
                 Ecuación característica:
               </p>
-              <p class="text-lg font-mono text-gray-800">
-                {{ result.ecuacion_caracteristica }}
-              </p>
+              <!-- **USO DE DIRECTIVA v-katex AQUÍ** -->
+              <div v-katex="{ expression: result.ecuacion_caracteristica, options: { displayMode: false } }"></div>
             </div>
 
             <div
@@ -368,7 +464,8 @@ function prevStep() {
               class="bg-white p-4 rounded-lg border-l-4 border-blue-500"
             >
               <p class="text-sm font-semibold text-gray-600">Raíces:</p>
-              <p class="text-lg font-mono">{{ result.raices }}</p>
+              <!-- **USO DE DIRECTIVA v-katex AQUÍ** -->
+              <div v-katex="{ expression: result.raices, options: { displayMode: false } }"></div>
             </div>
 
             <div
@@ -378,8 +475,9 @@ function prevStep() {
               <p class="text-sm font-semibold">
                 Soluciones Linealmente Independientes:
               </p>
-              <p class="font-mono">y₁ = {{ result.soluciones_li.y1 }}</p>
-              <p class="font-mono">y₂ = {{ result.soluciones_li.y2 }}</p>
+              <!-- **USO DE DIRECTIVA v-katex AQUÍ** -->
+              <div v-katex="{ expression: `y_1 = ${result.soluciones_li.y1}`, options: { displayMode: false } }"></div>
+              <div v-katex="{ expression: `y_2 = ${result.soluciones_li.y2}`, options: { displayMode: false } }"></div>
             </div>
 
             <div
@@ -387,7 +485,8 @@ function prevStep() {
               class="bg-white p-4 rounded-lg border-l-4 border-green-500"
             >
               <p class="text-sm font-semibold">Solución General:</p>
-              <p class="text-xl font-mono">{{ result.solucion_general }}</p>
+              <!-- **USO DE DIRECTIVA v-katex AQUÍ** -->
+              <div v-katex="{ expression: result.solucion_general, options: { displayMode: true } }"></div>
             </div>
 
             <div
@@ -395,7 +494,8 @@ function prevStep() {
               class="bg-white p-4 rounded-lg border-l-4 border-purple-500"
             >
               <p class="text-sm font-semibold">Solución Original:</p>
-              <p class="font-mono">{{ result.solucion_original }}</p>
+              <!-- **USO DE DIRECTIVA v-katex AQUÍ** -->
+              <div v-katex="{ expression: result.solucion_original, options: { displayMode: false } }"></div>
             </div>
 
             <p
