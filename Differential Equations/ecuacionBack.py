@@ -5,80 +5,204 @@ from flask_cors import CORS, cross_origin
 
 # Inicialización de la aplicación Flask
 app = Flask(__name__)
-
 CORS(app)
 
-def format_raiz(raiz):
+def format_coef(c, variable='y'):
     """
-    Formatea la parte real de una raíz compleja o real.
-    Devuelve un entero si es un número cerrado a un entero, 
-    o un float redondeado a 4 decimales.
+    Formatea un coeficiente para LaTeX: omite '1' o '-1' (manteniendo el signo), 
+    maneja el signo '+' automáticamente, y omite el término si es '0'.
     """
-    valor_real = raiz.real
-
-    if np.isclose(valor_real % 1, 0):
-        return int(valor_real)
+    if np.isclose(c, 0):
+        return ""
+    
+    abs_c = abs(c)
+    
+    # Manejar el signo
+    signo = " + " if c > 0 else " - "
+    
+    if np.isclose(abs_c, 1):
+        # Coeficiente es 1 o -1
+        if variable in ['y', 'y\'', 'y\'\'']:
+            # No mostrar el 1, solo el signo (si no es el primer término)
+            return f"{signo}{variable}"
+        else:
+            # Para términos constantes (e.g., parte de la solución)
+            return f"{signo}1"
     else:
-        return round(valor_real, 4)
+        # Coeficiente es diferente de 1 o -1 o 0
+        formatted_c = str(round(abs_c, 4))
+        return f"{signo}{formatted_c}{variable}"
+
+def format_ecuacion_original(a, b, c):
+    """Formatea la EDO ay'' + by' + cy = 0 en LaTeX."""
+    parts = []
+
+    # Coeficiente 'a' (siempre el primer término, no lleva signo '+' inicial)
+    if not np.isclose(a, 0):
+        a_abs = abs(a)
+        if np.isclose(a_abs, 1):
+            parts.append(r"y''")
+        else:
+            parts.append(f"{round(a_abs, 4)}y''")
+        
+        # Si 'a' es negativo, agregar el signo al inicio
+        if a < 0:
+            parts[0] = f"-{parts[0]}"
+
+    # Coeficiente 'b'
+    if not np.isclose(b, 0):
+        b_formatted = format_coef(b, 'y\'')
+        parts.append(b_formatted)
+
+    # Coeficiente 'c'
+    if not np.isclose(c, 0):
+        c_formatted = format_coef(c, 'y')
+        parts.append(c_formatted)
+
+    # Si la ecuación no tiene partes, es un caso trivial
+    if not parts:
+        return "0 = 0" 
+
+    # Ensamblar y simplificar signos
+    ecuacion = "".join(parts).strip()
+    
+    # Limpiar signos iniciales
+    if ecuacion.startswith(" + "):
+        ecuacion = ecuacion[3:]
+    elif ecuacion.startswith(" - "):
+        ecuacion = "-" + ecuacion[3:]
+    
+    return f"{ecuacion} = 0"
+
+def format_caracteristica(a, b, c):
+    """Formatea la ecuación característica en LaTeX usando 'm'."""
+    parts = []
+
+    # Coeficiente 'a' (siempre el primer término, no lleva signo '+' inicial)
+    if not np.isclose(a, 0):
+        a_abs = abs(a)
+        if np.isclose(a_abs, 1):
+            parts.append(r"m^2")
+        else:
+            parts.append(f"{round(a_abs, 4)}m^2")
+        
+        if a < 0:
+            parts[0] = f"-{parts[0]}"
+
+    # Coeficiente 'b'
+    if not np.isclose(b, 0):
+        b_formatted = format_coef(b, 'm')
+        parts.append(b_formatted)
+
+    # Coeficiente 'c'
+    if not np.isclose(c, 0):
+        c_formatted = format_coef(c, '') # Constante
+        parts.append(c_formatted)
+
+    ecuacion = "".join(parts).strip()
+    
+    if ecuacion.startswith(" + "):
+        ecuacion = ecuacion[3:]
+    elif ecuacion.startswith(" - "):
+        ecuacion = "-" + ecuacion[3:]
+
+    return f"{ecuacion} = 0"
+
+def format_raiz_number(raiz):
+    """
+    Formatea el valor numérico de una raíz real o compleja (parte real o imaginaria).
+    """
+    valor = raiz.real
+
+    if np.isclose(valor % 1, 0):
+        return str(int(valor))
+    else:
+        return str(round(valor, 4))
 
 def solve_edo(a, b, c):
     """
     Resuelve la EDO homogénea ay'' + by' + cy = 0 y retorna
-    los resultados como un diccionario.
+    los resultados en formato LaTeX.
     """
     results = {}
     
     # Ecuación característica
-    results['ecuacion_original'] = f"{a}y'' + {b}y' + {c}y = 0"
-    results['ecuacion_caracteristica'] = f"{a}m^2 + {b}m + {c} = 0"
+    results['solucion_original'] = format_ecuacion_original(a, b, c)
+    results['ecuacion_caracteristica'] = format_caracteristica(a, b, c)
     
     coeficientes = [a, b, c]
     raices = np.roots(coeficientes)
 
     # Caso 1: Raíces Reales e Iguales (m1 = m2 = m)
     if np.isclose(raices[0], raices[1]):
-        m = format_raiz(raices[0])
+        m = format_raiz_number(raices[0])
         
         results['tipo_raices'] = "Reales e Iguales"
-        results['raices'] = f"m1 = m2 = {m}"
+        results['raices'] = f"m_1 = m_2 = {m}"
         
-        # Soluciones l.i. y general
-        y_1 = f"C1 * e^({m}x)"
-        y_2 = f"C2 * x*e^({m}x)"
+        # Soluciones l.i. y general (Usando \text{C}_1 y \text{C}_2 para constantes)
+        y_1 = f"e^{{{m}x}}"
+        y_2 = f"x e^{{{m}x}}"
         
         results['soluciones_li'] = {'y1': y_1, 'y2': y_2}
-        results['solucion_general'] = f"y = {y_1} + {y_2}"
+        results['solucion_general'] = f"y(x) = \\text{{C}}_1 {y_1} + \\text{{C}}_2 {y_2}"
 
     # Caso 2: Raíces Complejas Conjugadas (m = alpha ± beta*i)
     elif not np.isclose(raices[0].imag, 0):
-        alpha = format_raiz(raices[0])
-        beta = format_raiz(abs(raices[0].imag)) 
+        alpha = format_raiz_number(raices[0].real)
+        beta = format_raiz_number(abs(raices[0].imag)) 
 
+        # Si alpha es cero, simplificar la notación de la raíz
+        if np.isclose(raices[0].real, 0):
+            raiz_latex = f"m = \pm {beta}i"
+            e_alpha_x = ""
+        else:
+            raiz_latex = f"m = {alpha} \pm {beta}i"
+            e_alpha_x = f"e^{{{alpha}x}}"
+        
+        # Si beta es uno, simplificar la notación del cos/sin
+        beta_x = "" if np.isclose(float(beta), 1) else f"{beta}x"
+        
         results['tipo_raices'] = "Complejas Conjugadas"
-        results['raices'] = f"m = {alpha} +- {beta}i)"
-        results['variables']=f"alpha={alpha},beta={beta}"
+        results['raices'] = raiz_latex
         
         # Soluciones l.i. y general
-        y_1 = f"C1 * e^({alpha}x) * cos({beta}x)"
-        y_2 = f"C2 * e^({alpha}x) * sen({beta}x)"
+        y_1 = f"{e_alpha_x} \\cos({beta_x})"
+        y_2 = f"{e_alpha_x} \\sin({beta_x})"
+
+        # Limpiar caso e^{0x} que es 1
+        if e_alpha_x == "":
+            y_1 = y_1.strip()
+            y_2 = y_2.strip()
         
         results['soluciones_li'] = {'y1': y_1, 'y2': y_2}
-        results['solucion_general'] = f"y = {y_1} + {y_2}"
+        
+        # Si e^{alpha x} = 1, la solución general es C1*cos(...) + C2*sin(...)
+        if e_alpha_x == "":
+            results['solucion_general'] = f"y(x) = \\text{{C}}_1 \\cos({beta_x}) + \\text{{C}}_2 \\sin({beta_x})"
+        else:
+            results['solucion_general'] = f"y(x) = {e_alpha_x} (\\text{{C}}_1 \\cos({beta_x}) + \\text{{C}}_2 \\sin({beta_x}))"
+            
 
     # Caso 3: Raíces Reales y Distintas (m1 != m2)
     else:
-        raiz_1_formato = format_raiz(raices[0])
-        raiz_2_formato = format_raiz(raices[1])
+        # Asegurar que las raíces estén ordenadas para una presentación consistente
+        m1_val = format_raiz_number(raices[0])
+        m2_val = format_raiz_number(raices[1])
         
         results['tipo_raices'] = "Reales y Distintas"
-        results['raices'] = f"m1 = {raiz_1_formato}, m2 = {raiz_2_formato}"
+        results['raices'] = f"m_1 = {m1_val}, \quad m_2 = {m2_val}"
         
         # Soluciones l.i. y general
-        y_1 = f"C1 * e^({raiz_1_formato}x)"
-        y_2 = f"C2 * e^({raiz_2_formato}x)"
+        y_1 = f"e^{{{m1_val}x}}"
+        y_2 = f"e^{{{m2_val}x}}"
         
-        results['soluciones_li'] = {'y1': y_1, 'y2': y_2}
-        results['solucion_general'] = f"y = {y_1} + {y_2}"
+        # Simplificar si el exponente es 0 o 1
+        y_1_final = "1" if m1_val == "0" else y_1
+        y_2_final = "1" if m2_val == "0" else y_2
+
+        results['soluciones_li'] = {'y1': y_1_final, 'y2': y_2_final}
+        results['solucion_general'] = f"y(x) = \\text{{C}}_1 {y_1_final} + \\text{{C}}_2 {y_2_final}"
         
     return results
 
@@ -89,17 +213,16 @@ def solve_edo(a, b, c):
 def solve_edo_api():
     """
     Endpoint para resolver la EDO ay'' + by' + cy = 0.
-    Espera los coeficientes a, b, c como parámetros de consulta.
-    Ejemplo de uso: /solve?a=1&b=3&c=2
     """
     data = request.json
     try:
-        a = float(data.get('a'))
-        b = float(data.get('b'))
-        c = float(data.get('c'))
+        # Usamos .get() para evitar KeyError si falta una clave
+        a = float(data.get('a', 0))
+        b = float(data.get('b', 0))
+        c = float(data.get('c', 0))
         
-        if a == 0:
-             # Una EDO de segundo orden requiere que 'a' sea distinto de 0
+        if np.isclose(a, 0):
+            # Una EDO de segundo orden requiere que 'a' sea distinto de 0
             return jsonify({'error': 'El coeficiente "a" debe ser diferente de cero para una EDO de segundo orden.'}), 400
             
         # Llamar a la función de lógica para resolver
@@ -108,7 +231,7 @@ def solve_edo_api():
         # Devolver la solución en formato JSON
         return jsonify(solution)
 
-    except (TypeError, ValueError):
+    except (TypeError, ValueError, AttributeError):
         return jsonify({
             'error': 'Faltan parámetros o son inválidos. Asegúrese de proporcionar "a", "b" y "c" como números.'
         }), 400
@@ -118,4 +241,5 @@ def solve_edo_api():
 
 # --- Ejecutar la aplicación ---
 if __name__ == '__main__':
-    app.run(debug=True)
+    # Usar el puerto 5000 como se menciona en el frontend
+    app.run(host='0.0.0.0', port=5000, debug=True)
