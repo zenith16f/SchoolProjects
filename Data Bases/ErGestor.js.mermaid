@@ -11,7 +11,7 @@ erDiagram
     
     USUARIOS {
         int idUsuario PK "Identificador único"
-        varchar username "Nombre de usuario"
+        varchar username UK "Nombre de usuario"
         varchar email UK "Correo electrónico único"
         varchar password "Contraseña encriptada"
         boolean activo "Estado de la cuenta"
@@ -24,7 +24,7 @@ erDiagram
         enum tipo "ingreso o gasto"
         text descripcion "Descripción detallada"
         varchar color "Color en hexadecimal"
-        varchar icono "Nombre del icono"
+        enum icono "Nombre del icono"
         boolean activa "Soft delete"
     }
     
@@ -35,7 +35,7 @@ erDiagram
         enum tipo "efectivo banco tarjeta ahorro"
         decimal saldo_inicial "Saldo al crear cuenta"
         decimal saldo_actual "Saldo actualizado"
-        varchar moneda "Código de moneda"
+        enum moneda "Código de moneda"
         boolean activa "Estado de la cuenta 
         (Se puede usar en soft delete)"
         datetime fecha_creacion "Fecha de creación"
@@ -50,6 +50,8 @@ erDiagram
         text descripcion "Descripción breve"
         date fecha "Fecha de la transacción"
         text notas "Notas adicionales"
+        date fechaCreacion "Fecha de creacion de la transaccion"
+        date fechaActualizacion "Fecha de actualizacion de la transaccion"  
     }
 
     
