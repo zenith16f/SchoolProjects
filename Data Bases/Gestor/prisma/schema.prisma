@@ -1,0 +1,183 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "mysql"
+}
+
+
+// ENUM
+enum TipoTransaccion {
+  ingreso
+  egreso
+}
+
+enum TipoCuenta {
+  banco
+  efectivo
+  tarjeta_debito
+  tarjeta_credito
+  ahorro
+}
+
+enum Moneda {
+   MXN
+  USD
+  EUR
+  CAD
+}
+
+enum IconoCategoria {
+  // DINERO & INGRESOS (4)
+  dollar          // 💰 Ingresos generales
+  briefcase       // 💼 Trabajo/Salario
+  trending_up     // 📈 Inversiones
+  piggy_bank      // 🐷 Ahorros
+  
+  // ALIMENTOS (3)
+  shopping_cart   // 🛒 Supermercado
+  utensils        // 🍽️ Restaurantes
+  coffee          // ☕ Café/Bebidas
+  
+  // TRANSPORTE (2)
+  car             // 🚗 Auto/Gasolina
+  bus             // 🚌 Transporte público
+  
+  // HOGAR (3)
+  home            // 🏠 Renta/Vivienda
+  zap             // ⚡ Servicios (luz, agua, gas)
+  wrench          // 🔧 Mantenimiento/Reparaciones
+  
+  // ENTRETENIMIENTO (3)
+  tv              // 📺 Streaming/TV
+  gamepad         // 🎮 Videojuegos
+  ticket          // 🎟️ Cine/Eventos
+  
+  // SALUD & EDUCACIÓN (3)
+  heart           // ❤️ Salud/Médico
+  dumbbell        // 🏋️ Gym/Deporte
+  book            // 📚 Educación/Libros
+  
+  // COMPRAS (2)
+  shopping_bag    // 🛍️ Ropa/Moda
+  smartphone      // 📱 Tecnología
+  
+  // OTROS (1)
+  more_horizontal // ⋯ Otros/Misceláneos
+}
+
+// MODEL 
+model Usuario {
+  idUsuario Int @id @default(autoincrement())
+  username String @unique @db.VarChar(50)
+  email String @unique @db.VarChar(100)
+  password String @db.VarChar(255)
+  activo Boolean @default(true)
+
+  cuentas       Cuenta[]
+  categorias    Categoria[]
+  transacciones Transaccion[]
+  metas         MetaAhorro[]
+
+  @@index([email])
+  @@index([username])
+  @@map("usuarios")
+}
+
+
+model Cuenta {
+  idCuenta      Int           @id @default(autoincrement())
+  idUsuario     Int
+  nombre        String        @db.VarChar(100)
+  tipo          TipoCuenta
+  saldoInicial  Decimal       @default(0) @db.Decimal(15, 2)
+  saldoActual   Decimal       @default(0) @db.Decimal(15, 2)
+  moneda        Moneda        @default(MXN)
+  activa        Boolean       @default(true)
+  fechaCreacion DateTime      @default(now())
+  
+  usuario       Usuario       @relation(fields: [idUsuario], references: [idUsuario], onDelete: Cascade)
+  transacciones Transaccion[]
+
+  @@index([idUsuario])
+  @@index([activa])
+  @@index([idUsuario, activa])
+  @@map("cuentas")
+}
+
+model Categoria {
+  idCategoria   Int              @id @default(autoincrement())
+  idUsuario     Int
+  nombre        String           @db.VarChar(100)
+  tipo          TipoTransaccion
+  descripcion   String?          @db.VarChar(255)
+  color         String           @default("#6B7280") @db.VarChar(20)
+  icono         IconoCategoria   @default(dollar)
+  activa        Boolean          @default(true)
+  
+  usuario       Usuario          @relation(fields: [idUsuario], references: [idUsuario], onDelete: Cascade)
+  transacciones Transaccion[]
+
+  @@index([idUsuario, tipo])
+  @@index([activa])
+  @@map("categorias")
+}
+
+model Transaccion {
+  idTransaccion Int @id @default(autoincrement())
+  idUsuario     Int
+  idCuenta      Int
+  idCategoria   Int
+  monto         Decimal   @db.Decimal(15, 2)
+  descripcion   String    @db.VarChar(200)
+  fecha         DateTime  @db.Date
+  notas         String?   @db.Text
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @default(now())  @updatedAt
+  
+  usuario       Usuario   @relation(fields: [idUsuario], references: [idUsuario], onDelete: Cascade)
+  cuenta        Cuenta    @relation(fields: [idCuenta], references: [idCuenta], onDelete: Cascade)
+  categoria     Categoria @relation(fields: [idCategoria], references: [idCategoria], onDelete: Restrict)
+
+  @@index([idUsuario, fecha(sort: Desc)])
+  @@index([idCuenta])
+  @@index([idCategoria])
+  @@index([fecha])
+  @@map("transacciones")
+}
+
+// Optional Models, Future Modules
+model MetaAhorro {
+  idMeta         Int          @id @default(autoincrement())
+  idUsuario      Int
+  nombre         String       @db.VarChar(150)
+  descripcion    String?      @db.Text
+  montoObjetivo  Decimal      @db.Decimal(15, 2)
+  montoActual    Decimal      @default(0) @db.Decimal(15, 2)
+  fechaInicio    DateTime     @db.Date
+  fechaLimite    DateTime?    @db.Date
+  completada     Boolean      @default(false)
+  
+  usuario        Usuario      @relation(fields: [idUsuario], references: [idUsuario], onDelete: Cascade)
+  aportaciones   Aportacion[]
+
+  @@index([idUsuario, completada])
+  @@index([fechaLimite])
+  @@map("metas_ahorro")
+}
+
+model Aportacion {
+  idAportacion Int        @id @default(autoincrement())
+  idMeta       Int
+  descripcion  String?    @db.VarChar(200)
+  monto        Decimal    @db.Decimal(15, 2)
+  metodo       String?    @db.VarChar(100)
+  fechaAporte  DateTime   @db.Date
+  
+  meta         MetaAhorro @relation(fields: [idMeta], references: [idMeta], onDelete: Cascade)
+
+  @@index([idMeta, fechaAporte(sort: Desc)])
+  @@map("aportaciones")
+}
