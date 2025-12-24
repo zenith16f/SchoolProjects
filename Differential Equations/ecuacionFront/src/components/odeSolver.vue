@@ -502,7 +502,8 @@ function prevStep() {
               class="text-sm text-green-700 font-semibold bg-white p-3 rounded-lg"
               v-if="result.tipo_raices"
             >
-              Tipo : {{ result.tipo_raices }}
+            <div v-katex="{ expression:' \\text{ Tipo: ' + result.tipo_raices + '}', options: { displayMode: true } }"></div>
+
             </p>
 
             <!-- <p

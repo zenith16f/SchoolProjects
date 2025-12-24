@@ -137,7 +137,7 @@ def solve_edo(a, b, c):
     if np.isclose(raices[0], raices[1]):
         m = format_raiz_number(raices[0])
         
-        results['tipo_raices'] = "Reales e Iguales"
+        results['tipo_raices'] = "Reales\ e\ Iguales"
         results['raices'] = f"m_1 = m_2 = {m}"
         
         # Soluciones l.i. y general (Usando \text{C}_1 y \text{C}_2 para constantes)
@@ -163,7 +163,7 @@ def solve_edo(a, b, c):
         # Si beta es uno, simplificar la notación del cos/sin
         beta_x = "" if np.isclose(float(beta), 1) else f"{beta}x"
         
-        results['tipo_raices'] = "Complejas Conjugadas"
+        results['tipo_raices'] = "Complejas\ Conjugadas"
         results['raices'] = raiz_latex
         
         # Soluciones l.i. y general
@@ -190,7 +190,7 @@ def solve_edo(a, b, c):
         m1_val = format_raiz_number(raices[0])
         m2_val = format_raiz_number(raices[1])
         
-        results['tipo_raices'] = "Reales y Distintas"
+        results['tipo_raices'] = "Reales\ y\ Distintas"
         results['raices'] = f"m_1 = {m1_val}, \quad m_2 = {m2_val}"
         
         # Soluciones l.i. y general
