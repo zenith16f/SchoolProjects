@@ -3,10 +3,14 @@
  */
 #include "interfaz.h"
 #include <string.h>
+#include <stdlib.h>
+#include <wchar.h>
+#include <locale.h>
 
 void InitColores(void) {
     start_color();
     use_default_colors();
+    set_escdelay(25); /* ESC responde en 25ms en vez de 1000ms */
     init_pair(C_NORMAL, COLOR_WHITE, -1);
     init_pair(C_TITULO, COLOR_CYAN, -1);
     init_pair(C_INPUT,  COLOR_WHITE, COLOR_BLUE);
@@ -35,6 +39,10 @@ void DibujarMarco(WINDOW *w, const char *titulo) {
         mvwprintw(w, 0, (ancho - (int)strlen(titulo) - 4)/2, "[ %s ]", titulo);
         wattroff(w, COLOR_PAIR(C_TITULO) | A_BOLD);
     }
+    /* Mostrar instrucción de ESC en la parte inferior */
+    wattron(w, COLOR_PAIR(C_BORDE));
+    mvwprintw(w, getmaxy(w)-1, 2, " ESC: Regresar ");
+    wattroff(w, COLOR_PAIR(C_BORDE));
 }
 
 void MostrarMsg(WINDOW *w, int fila, const char *msg, int color) {
@@ -64,8 +72,13 @@ void MostrarBanner(WINDOW *w, int fila) {
     wattroff(w, COLOR_PAIR(C_TITULO) | A_BOLD);
 }
 
-void ObtenerTexto(WINDOW *w, int fila, int col, char *buf, int max, int oculto) {
-    int ch, pos = 0, ancho_campo = (max < 30) ? max : 30;
+/*
+ * ObtenerTexto - Lee texto con soporte para ESC (regresar)
+ * Retorna: 1 si el usuario escribió algo, 0 si presionó ESC
+ */
+int ObtenerTexto(WINDOW *w, int fila, int col, char *buf, int max, int oculto) {
+    wint_t ch; int pos = 0, ancho_campo = (max < 30) ? max : 30;
+    wchar_t wbuf[256] = {0};
     int i;
     wattron(w, COLOR_PAIR(C_INPUT));
     for (i = 0; i < ancho_campo; i++) mvwaddch(w, fila, col+i, ' ');
@@ -76,28 +89,48 @@ void ObtenerTexto(WINDOW *w, int fila, int col, char *buf, int max, int oculto) 
     noecho();
 
     while (1) {
-        ch = wgetch(w);
-        if (ch == '\n' || ch == KEY_ENTER) break;
-        if ((ch == KEY_BACKSPACE || ch == 127 || ch == 8) && pos > 0) {
+        int res = wget_wch(w, &ch);
+        if (ch == 27) { /* ESC */
+            curs_set(0);
+            buf[0] = '\0';
+            return 0;
+        }
+        if (ch == '\n' || ch== '\r' ||ch == KEY_ENTER) break;
+        if ((ch == KEY_BACKSPACE || ch == 127 || ch == 8) || ch=='\b') {
+            if(pos>0){
             pos--;
-            buf[pos] = '\0';
+                wbuf[pos] = L'\0';
+                buf[pos] = '\0';
+                wattron(w, COLOR_PAIR(C_INPUT));
+                for (i = 0; i < ancho_campo; i++) mvwaddch(w, fila, col+i, ' ');
+                if(oculto){
+                    for(i = 0; i<pos;i++) mvwaddch(w, fila, col+i,'*');
+                }else{
+                    mvwaddnwstr(w,fila,col,wbuf,pos);
+                }
+                wattroff(w, COLOR_PAIR(C_INPUT));
+                wmove(w, fila, col+pos);
+            }
+        } else if (res==OK && pos < max-1 && ch >= 32) {
+            wbuf[pos] = (wchar_t)ch;
+            pos++;
+            wbuf[pos] = L'\0';
             wattron(w, COLOR_PAIR(C_INPUT));
-            for (i = 0; i < ancho_campo; i++) mvwaddch(w, fila, col+i, ' ');
-            for (i = 0; i < pos; i++) mvwaddch(w, fila, col+i, oculto ? '*' : buf[i]);
+            for(i=0;i<ancho_campo; i++) mvwaddch(w,fila,col+i,' ');
+            if(oculto){
+              for (i = 0; i < pos; i++) mvwaddch(w, fila, col+i, '*');
+            }
+            else{
+               mvwaddnwstr(w, fila, col, wbuf, pos);
+            }
             wattroff(w, COLOR_PAIR(C_INPUT));
             wmove(w, fila, col+pos);
-        } else if (pos < max-1 && ch >= 32 && ch <= 126) {
-            buf[pos] = (char)ch;
-            pos++;
-            buf[pos] = '\0';
-            wattron(w, COLOR_PAIR(C_INPUT));
-            mvwaddch(w, fila, col+pos-1, oculto ? '*' : (char)ch);
-            wattroff(w, COLOR_PAIR(C_INPUT));
         }
         wrefresh(w);
     }
     curs_set(0);
-    buf[pos] = '\0';
+    wcstombs(buf, wbuf, max);
+    return 1;
 }
 
 int MenuSeleccion(WINDOW *w, const char **opciones, int num, int fila_base, const char *titulo) {
@@ -126,5 +159,6 @@ int MenuSeleccion(WINDOW *w, const char **opciones, int num, int fila_base, cons
         if (ch == KEY_UP && sel > 0) sel--;
         else if (ch == KEY_DOWN && sel < num-1) sel++;
         else if (ch == '\n' || ch == KEY_ENTER) return sel;
+        else if (ch == 27) return -1;/* ESC = regresar */
     }
 }

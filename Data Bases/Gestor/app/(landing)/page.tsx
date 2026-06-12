@@ -91,10 +91,7 @@ const LandingPage = () => {
           </TypingAnimation>
         </section>
         <section className="flex justify-center mt-4">
-          <BlurFade
-            delay={0.5}
-            duration={1.5}
-          >
+          <BlurFade delay={0.5} duration={1.5}>
             <Link
               href={"/register"}
               className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50 px-7 py-3"
@@ -106,10 +103,7 @@ const LandingPage = () => {
         </section>
       </section>
       <section className="flex flex-col gap-3 sm:gap-4 md:gap-6 w-full max-w-sm sm:max-w-2xl md:max-w-4xl lg:max-w-5xl mx-auto px-4">
-        <BlurFade
-          delay={1.5}
-          duration={1}
-        >
+        <BlurFade delay={1.5} duration={1}>
           <section className="flex flex-col gap-5 text-center my-5 ">
             <span className="text-xl sm:text-2xl md:text-3xl lg:text-4xl text-center font-semibold">
               Todo lo que necesitas para gestionar tu dinero
@@ -132,11 +126,7 @@ const LandingPage = () => {
         </BlurFade>
       </section>
       <section className="flex flex-col gap-3 sm:gap-4 md:gap-6 w-full max-w-sm sm:max-w-2xl md:max-w-4xl lg:max-w-5xl mx-auto px-4">
-        <BlurFade
-          inView
-          duration={1}
-          delay={0.5}
-        >
+        <BlurFade inView duration={1} delay={0.5}>
           <section className="flex flex-col gap-8 text-center my-5 ">
             <span className="text-xl sm:text-2xl md:text-3xl lg:text-4xl text-center font-semibold">
               Características que marcan la diferencia
@@ -185,11 +175,7 @@ const LandingPage = () => {
         </BlurFade>
       </section>
       <section className="w-full max-w-6xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
-        <BlurFade
-          inView
-          duration={1}
-          delay={0.5}
-        >
+        <BlurFade inView duration={1} delay={0.5}>
           <div className="border border-gray-200 rounded-2xl linear-gradient-to-br from-gray-50 to-white  p-8 sm:p-12 md:p-16">
             <div className="flex flex-col items-center text-center space-y-6 sm:space-y-8">
               <span className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold text-gray-900 leading-tight">
@@ -212,6 +198,7 @@ const LandingPage = () => {
             </div>
           </div>
         </BlurFade>
+        <p> Hola como estas este codigo es en zed</p>
       </section>
     </div>
   );
