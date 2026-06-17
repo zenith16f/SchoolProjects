@@ -1,26 +1,84 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+/* ===== Tema PlayedIt — Tailwind v4 ===== */
+@theme {
+  /* Colores de superficie */
+  --color-surface: #14181c;
+  --color-surface-2: #1c2128;
+  --color-surface-3: #242b33;
+
+  /* Acento */
+  --color-accent: #00e676;
+  --color-accent-dim: #00c853;
+
+  /* Texto */
+  --color-muted: #8b9db0;
+  --color-border: #2a3340;
+
+  /* Tipografía */
+  --font-display: "Space Grotesk", sans-serif;
+  --font-body: "Inter", sans-serif;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
+/* ===== Base ===== */
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background-color: var(--color-surface);
+  color: #ffffff;
+  font-family: var(--font-body);
+}
+
+/* ===== Scrollbar personalizado ===== */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--color-surface);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 3px;
+}
+
+/* ===== Textura hero (scanlines sutiles) ===== */
+.hero-grid {
+  background-image: linear-gradient(
+      rgba(0, 230, 118, 0.04) 1px,
+      transparent 1px
+    ),
+    linear-gradient(90deg, rgba(0, 230, 118, 0.04) 1px, transparent 1px);
+  background-size: 48px 48px;
+}
+
+/* ===== Logo glow ===== */
+.logo-glow {
+  text-shadow: 0 0 18px rgba(0, 230, 118, 0.5);
+}
+
+/* ===== Game card hover ===== */
+.game-card {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.game-card:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6),
+    0 0 0 1px rgba(0, 230, 118, 0.2);
+}
+
+/* ===== Focus del search bar ===== */
+.search-bar:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px #00e676, 0 0 16px rgba(0, 230, 118, 0.25);
+}
+
+/* ===== Animación para el banner ===== */
+.banner-dismiss {
+  transition: max-height 0.25s ease, opacity 0.2s ease;
+  overflow: hidden;
+}
+
+/* ===== Reduced motion ===== */
+@media (prefers-reduced-motion: reduce) {
+  .game-card {
+    transition: none;
+  }
 }
