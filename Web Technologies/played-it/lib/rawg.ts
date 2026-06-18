@@ -1,7 +1,3 @@
-// =====================================================
-// lib/rawg.ts — Funciones para consumir la API de RAWG.io
-// Docs: https://rawg.io/apidocs
-// =====================================================
 
 const BASE_URL = "https://api.rawg.io/api";
 
