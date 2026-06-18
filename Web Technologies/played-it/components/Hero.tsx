@@ -30,11 +30,14 @@ export default function Hero() {
 
         {/* Botones CTA */}
         <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-          <button className="w-full sm:w-auto bg-accent hover:bg-accent-dim text-surface font-display font-semibold px-7 py-3 rounded-xl transition-colors text-sm cursor-pointer">
-            Crear cuenta gratis
-          </button>
           <Link
-            href="#explorar"
+            href="/register"
+            className="w-full sm:w-auto bg-accent hover:bg-accent-dim text-surface font-display font-semibold px-7 py-3 rounded-xl transition-colors text-sm text-center"
+          >
+            Crear cuenta gratis
+          </Link>
+          <Link
+            href="/explore"
             className="w-full sm:w-auto border border-border hover:border-muted text-white font-display font-medium px-7 py-3 rounded-xl transition-colors text-sm bg-surface-2 hover:bg-surface-3 text-center"
           >
             Explorar juegos

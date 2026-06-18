@@ -1,8 +1,8 @@
-import Footer from "@/components/Footer";
-import Navbar from "@/components/Navbar";
-import { getGameById, getGameScreenshots } from "@/lib/rawg";
 import Image from "next/image";
 import Link from "next/link";
+import Navbar from "@/components/Navbar";
+import Footer from "@/components/Footer";
+import { getGameById, getGameScreenshots } from "@/lib/rawg";
 import { notFound } from "next/navigation";
 
 interface GamePageProps {
@@ -45,7 +45,7 @@ export default async function GamePage({ params }: GamePageProps) {
             />
           )}
           {/* Gradiente oscuro sobre la imagen */}
-          <div className="absolute inset-0 bg-lienar-to-t from-surface via-surface/80 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-t from-surface via-surface/80 to-transparent" />
 
           {/* Botón de regreso */}
           <Link
@@ -133,17 +133,26 @@ export default async function GamePage({ params }: GamePageProps) {
                 ))}
               </div>
 
-              {/* Botones de acción (modo visitante) */}
+              {/* Botones de acción (modo visitante → redirige a login) */}
               <div className="flex flex-wrap gap-3 mb-10">
-                <button className="bg-accent hover:bg-accent-dim text-surface font-display font-semibold text-sm px-6 py-2.5 rounded-xl transition-colors cursor-pointer">
+                <Link
+                  href="/login"
+                  className="bg-accent hover:bg-accent-dim text-surface font-display font-semibold text-sm px-6 py-2.5 rounded-xl transition-colors"
+                >
                   ✏️ Escribir reseña
-                </button>
-                <button className="border border-border hover:border-muted text-white font-medium text-sm px-6 py-2.5 rounded-xl transition-colors bg-surface-2 hover:bg-surface-3 cursor-pointer">
+                </Link>
+                <Link
+                  href="/login"
+                  className="border border-border hover:border-muted text-white font-medium text-sm px-6 py-2.5 rounded-xl transition-colors bg-surface-2 hover:bg-surface-3"
+                >
                   📋 Marcar como jugado
-                </button>
-                <button className="border border-border hover:border-muted text-white font-medium text-sm px-6 py-2.5 rounded-xl transition-colors bg-surface-2 hover:bg-surface-3 cursor-pointer">
+                </Link>
+                <Link
+                  href="/login"
+                  className="border border-border hover:border-muted text-white font-medium text-sm px-6 py-2.5 rounded-xl transition-colors bg-surface-2 hover:bg-surface-3"
+                >
                   🔖 Guardar en lista
-                </button>
+                </Link>
               </div>
 
               {/* Descripción */}
@@ -192,7 +201,7 @@ export default async function GamePage({ params }: GamePageProps) {
             </div>
 
             {/* Columna derecha: screenshots */}
-            <div className="lg:w-80 shrink-0">
+            <div className="lg:w-80 flex-shrink-0">
               <h3 className="font-display font-semibold text-sm text-white mb-3 uppercase tracking-wider">
                 Screenshots
               </h3>
@@ -222,9 +231,12 @@ export default async function GamePage({ params }: GamePageProps) {
               <h2 className="font-display font-bold text-xl text-white">
                 Reseñas de la comunidad
               </h2>
-              <button className="bg-accent hover:bg-accent-dim text-surface font-display font-semibold text-sm px-5 py-2 rounded-lg transition-colors cursor-pointer">
+              <Link
+                href="/login"
+                className="bg-accent hover:bg-accent-dim text-surface font-display font-semibold text-sm px-5 py-2 rounded-lg transition-colors"
+              >
                 Escribir reseña
-              </button>
+              </Link>
             </div>
             <div className="bg-surface-2 border border-border rounded-xl p-8 text-center">
               <p className="text-muted text-sm">
