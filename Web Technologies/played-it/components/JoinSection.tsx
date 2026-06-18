@@ -1,7 +1,10 @@
+import Link from "next/link";
+
 export default function JoinSection() {
   return (
     <section className="px-4 sm:px-6 lg:px-8 py-16">
       <div className="max-w-2xl mx-auto bg-surface-2 border border-border rounded-2xl px-8 py-12 text-center relative overflow-hidden">
+        {/* Glows decorativos */}
         <div className="absolute top-0 left-0 w-32 h-32 bg-accent/5 rounded-full blur-2xl -translate-x-1/2 -translate-y-1/2 pointer-events-none" />
         <div className="absolute bottom-0 right-0 w-48 h-48 bg-accent/5 rounded-full blur-2xl translate-x-1/2 translate-y-1/2 pointer-events-none" />
 
@@ -17,9 +20,12 @@ export default function JoinSection() {
             y encuentran su próximo juego favorito.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-            <button className="w-full sm:w-auto bg-accent hover:bg-accent-dim text-surface font-display font-semibold px-8 py-3 rounded-xl transition-colors text-sm cursor-pointer">
+            <Link
+              href="/register"
+              className="w-full sm:w-auto bg-accent hover:bg-accent-dim text-surface font-display font-semibold px-8 py-3 rounded-xl transition-colors text-sm text-center inline-block"
+            >
               Unirse
-            </button>
+            </Link>
           </div>
         </div>
       </div>

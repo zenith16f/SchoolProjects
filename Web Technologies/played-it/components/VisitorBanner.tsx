@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 
 export default function VisitorBanner() {
@@ -14,14 +15,17 @@ export default function VisitorBanner() {
           <span className="w-1.5 h-1.5 rounded-full bg-accent/70 inline-block" />
           Estás en modo visitante — puedes explorar todo, pero para reseñar y
           guardar necesitas una cuenta.
-          <button className="text-accent hover:text-white underline underline-offset-2 font-medium transition-colors">
+          <Link
+            href="/register"
+            className="text-accent hover:text-white underline underline-offset-2 font-medium transition-colors"
+          >
             Crear cuenta
-          </button>
+          </Link>
         </span>
       </p>
       <button
         onClick={() => setVisible(false)}
-        className="shrink-0 text-muted hover:text-white transition-colors"
+        className="flex-shrink-0 text-muted hover:text-white transition-colors"
       >
         <svg
           className="w-3.5 h-3.5"

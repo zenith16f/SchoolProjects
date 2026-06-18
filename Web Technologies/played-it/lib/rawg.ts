@@ -1,3 +1,8 @@
+// =====================================================
+// lib/rawg.ts — Funciones para consumir la API de RAWG.io
+// Docs: https://rawg.io/apidocs
+// =====================================================
+
 const BASE_URL = "https://api.rawg.io/api";
 
 function getApiKey(): string {
@@ -47,7 +52,7 @@ export interface RawgResponse<T> {
 
 // Obtener juegos populares / tendencias
 export async function getTrendingGames(
-  pageSize: number = 12,
+  pageSize: number = 12
 ): Promise<RawgGame[]> {
   const key = getApiKey();
   const url = `${BASE_URL}/games?key=${key}&ordering=-rating&page_size=${pageSize}&metacritic=80,100`;
@@ -62,7 +67,7 @@ export async function getTrendingGames(
 // Buscar juegos por texto
 export async function searchGames(
   query: string,
-  pageSize: number = 12,
+  pageSize: number = 12
 ): Promise<RawgGame[]> {
   const key = getApiKey();
   const url = `${BASE_URL}/games?key=${key}&search=${encodeURIComponent(query)}&page_size=${pageSize}`;
@@ -87,7 +92,7 @@ export async function getGameById(id: number): Promise<RawgGameDetail> {
 
 // Obtener screenshots de un juego
 export async function getGameScreenshots(
-  id: number,
+  id: number
 ): Promise<{ image: string; id: number }[]> {
   const key = getApiKey();
   const url = `${BASE_URL}/games/${id}/screenshots?key=${key}`;
@@ -102,7 +107,7 @@ export async function getGameScreenshots(
 // Obtener juegos por género
 export async function getGamesByGenre(
   genreSlug: string,
-  pageSize: number = 12,
+  pageSize: number = 12
 ): Promise<RawgGame[]> {
   const key = getApiKey();
   const url = `${BASE_URL}/games?key=${key}&genres=${genreSlug}&ordering=-rating&page_size=${pageSize}`;
@@ -112,4 +117,54 @@ export async function getGamesByGenre(
 
   const data: RawgResponse<RawgGame> = await res.json();
   return data.results;
+}
+
+// Obtener lista de géneros disponibles
+export interface RawgGenre {
+  id: number;
+  name: string;
+  slug: string;
+  games_count: number;
+  image_background: string;
+}
+
+export async function getGenres(): Promise<RawgGenre[]> {
+  const key = getApiKey();
+  const url = `${BASE_URL}/genres?key=${key}`;
+
+  const res = await fetch(url, { next: { revalidate: 86400 } }); // Cache 24h
+  if (!res.ok) throw new Error(`RAWG API error: ${res.status}`);
+
+  const data: RawgResponse<RawgGenre> = await res.json();
+  return data.results;
+}
+
+// Explorar juegos con paginación, búsqueda y filtro por género
+export async function exploreGames(options: {
+  query?: string;
+  genre?: string;
+  page?: number;
+  pageSize?: number;
+  ordering?: string;
+}): Promise<{ results: RawgGame[]; count: number; next: string | null }> {
+  const key = getApiKey();
+  const { query, genre, page = 1, pageSize = 20, ordering = "-rating" } = options;
+
+  const params = new URLSearchParams({
+    key,
+    page: String(page),
+    page_size: String(pageSize),
+    ordering,
+  });
+
+  if (query) params.set("search", query);
+  if (genre) params.set("genres", genre);
+
+  const url = `${BASE_URL}/games?${params.toString()}`;
+
+  const res = await fetch(url, { next: { revalidate: 600 } });
+  if (!res.ok) throw new Error(`RAWG API error: ${res.status}`);
+
+  const data: RawgResponse<RawgGame> = await res.json();
+  return { results: data.results, count: data.count, next: data.next };
 }

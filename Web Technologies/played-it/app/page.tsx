@@ -1,9 +1,10 @@
-import Footer from "@/components/Footer";
-import GameGrid from "@/components/GameGrid";
-import Hero from "@/components/Hero";
-import JoinSection from "@/components/JoinSection";
+import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import VisitorBanner from "@/components/VisitorBanner";
+import Hero from "@/components/Hero";
+import GameGrid from "@/components/GameGrid";
+import JoinSection from "@/components/JoinSection";
+import Footer from "@/components/Footer";
 import { getTrendingGames } from "@/lib/rawg";
 
 export default async function Home() {
@@ -37,7 +38,10 @@ export default async function Home() {
                 Lo más jugado ahora
               </h2>
             </div>
-            <button className="text-sm text-muted hover:text-white transition-colors font-medium flex items-center gap-1 cursor-pointer">
+            <Link
+              href="/explore"
+              className="text-sm text-muted hover:text-white transition-colors font-medium flex items-center gap-1"
+            >
               Ver todo
               <svg
                 className="w-4 h-4"
@@ -52,7 +56,7 @@ export default async function Home() {
                   d="M9 5l7 7-7 7"
                 />
               </svg>
-            </button>
+            </Link>
           </div>
 
           {games.length > 0 ? (
