@@ -1,16 +1,16 @@
-# SchoolProjects
+# 🎓 SchoolProjects
 
 A collection of school projects developed throughout my Computer Science degree at **ESCOM — IPN**.
 
 > Unlike coursework exercises, each entry here is a complete project with a defined scope, often involving UI, data persistence, or real problem-solving.
 
-------
+---
 
 ## 👤 Author
 
 **Fernando** · [@zenith16f](https://github.com/zenith16f)
 
-------
+---
 
 ## 🗂️ Structure
 
@@ -21,26 +21,34 @@ SchoolProjects/
 ├── Algorithms and Data Structures/
 │   └── Database Manager/
 ├── Data Bases/
-└── Differential Equations/
+├── Differential Equations/
+├── Operative Systems/
+└── Web Technologies/
+    └── played-it/
 ```
 
-------
+---
 
 ## 📦 Projects
 
-| Subject                      | Project                 | Language(s)  | Description                                                 |
-| ---------------------------- | ----------------------- | ------------ | ----------------------------------------------------------- |
-| Algorithms & Data Structures | Database Manager        | C            | CLI-based record manager using custom data structures       |
-| Data Bases                   | Finances Manager        | Typescript   | Database-backed application                                 |
-| Differential Equations       | Second grade ODE solver | Python / Vue | Numerical methods and equation solvers for second grade ode |
+| Subject | Project | Language(s) | Description |
+|---------|---------|-------------|--------------|
+| Algorithms & Data Structures | Database Manager | C | CLI-based record manager using custom data structures |
+| Data Bases | Finances Manager | TypeScript | Database-backed personal finance application |
+| Differential Equations | Second Grade ODE Solver | Python / Vue | Numerical methods and equation solvers for second-grade ODEs |
+| Operative Systems | — | C | Processes, memory management, and scheduling project |
+| Web Technologies | played-it | — | Web application built with modern frontend technologies |
 
-------
+---
 
 ## 🧰 Languages & Tools
 
-![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=flat&logo=typescript&logoColor=white) ![Vue](https://img.shields.io/badge/Vue.js-42b883?style=flat&logo=vue.js&logoColor=white) ![Python](https://img.shields.io/badge/Python-3776AB?style=flat&logo=python&logoColor=white) ![C](https://img.shields.io/badge/C-00599C?style=flat&logo=c&logoColor=white)
+![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=flat&logo=typescript&logoColor=white)
+![Vue](https://img.shields.io/badge/Vue.js-42b883?style=flat&logo=vue.js&logoColor=white)
+![Python](https://img.shields.io/badge/Python-3776AB?style=flat&logo=python&logoColor=white)
+![C](https://img.shields.io/badge/C-00599C?style=flat&logo=c&logoColor=white)
 
-------
+---
 
 ## 📝 Notes
 
@@ -48,7 +56,7 @@ SchoolProjects/
 - Some are team projects; contributors are noted inside each folder where applicable.
 - Code quality varies — earlier projects reflect earlier stages of learning.
 
-------
+---
 
 ## 📜 License
 
