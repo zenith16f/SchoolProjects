@@ -1,12 +1,22 @@
 "use client";
 
 import Link from "next/link";
+<<<<<<< HEAD
+import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
+import { signIn } from "next-auth/react";
+=======
+import { useState, useTransition } from "react";
+>>>>>>> 30257b0bbc266734be5d6a539933f17b83680492
 
 export default function LoginPage() {
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+<<<<<<< HEAD
+  const router = useRouter();
+=======
+>>>>>>> 30257b0bbc266734be5d6a539933f17b83680492
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -17,19 +27,41 @@ export default function LoginPage() {
     const password = formData.get("password") as string;
 
     startTransition(async () => {
+<<<<<<< HEAD
+      try {
+        const result = await signIn("credentials", {
+          email,
+          password,
+          redirect: false,
+        });
+
+        if (result?.error) {
+          setError("Email o contraseña incorrectos");
+        } else {
+          router.push("/");
+          router.refresh();
+        }
+      } catch {
+        setError("Error al iniciar sesión");
+      }
+=======
       // TODO: Conectar con next-auth en fase backend
       // const result = await signIn("credentials", { email, password, redirect: false });
       console.log("[AUTH] Login attempt:", { email, password: "***" });
 
       // Placeholder: simular error para demostrar la UI
       setError("Funcionalidad disponible próximamente. Conectar con backend.");
+>>>>>>> 30257b0bbc266734be5d6a539933f17b83680492
     });
   };
 
   return (
     <div className="w-full max-w-sm">
       <div className="bg-surface-2 border border-border rounded-2xl p-8">
+<<<<<<< HEAD
+=======
         {/* Header */}
+>>>>>>> 30257b0bbc266734be5d6a539933f17b83680492
         <div className="text-center mb-8">
           <h1 className="font-display font-bold text-2xl text-white mb-2">
             Bienvenido de vuelta
@@ -39,9 +71,13 @@ export default function LoginPage() {
           </p>
         </div>
 
+<<<<<<< HEAD
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+=======
         {/* Formulario */}
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           {/* Email */}
+>>>>>>> 30257b0bbc266734be5d6a539933f17b83680492
           <div className="flex flex-col gap-1.5">
             <label htmlFor="email" className="text-sm text-muted font-medium">
               Correo electrónico
@@ -57,12 +93,17 @@ export default function LoginPage() {
             />
           </div>
 
+<<<<<<< HEAD
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor="password" className="text-sm text-muted font-medium">
+=======
           {/* Contraseña */}
           <div className="flex flex-col gap-1.5">
             <label
               htmlFor="password"
               className="text-sm text-muted font-medium"
             >
+>>>>>>> 30257b0bbc266734be5d6a539933f17b83680492
               Contraseña
             </label>
             <div className="relative">
@@ -80,6 +121,16 @@ export default function LoginPage() {
                 onClick={() => setShowPassword(!showPassword)}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-white transition-colors"
               >
+<<<<<<< HEAD
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round"
+                    d={showPassword
+                      ? "M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M3 3l18 18"
+                      : "M15 12a3 3 0 11-6 0 3 3 0 016 0zM2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                    }
+                  />
+                </svg>
+=======
                 {showPassword ? (
                   <svg
                     className="w-4 h-4"
@@ -114,18 +165,25 @@ export default function LoginPage() {
                     />
                   </svg>
                 )}
+>>>>>>> 30257b0bbc266734be5d6a539933f17b83680492
               </button>
             </div>
           </div>
 
+<<<<<<< HEAD
+=======
           {/* Error */}
+>>>>>>> 30257b0bbc266734be5d6a539933f17b83680492
           {error && (
             <p className="text-red-400 text-xs bg-red-400/10 border border-red-400/20 rounded-lg px-3 py-2">
               {error}
             </p>
           )}
 
+<<<<<<< HEAD
+=======
           {/* Submit */}
+>>>>>>> 30257b0bbc266734be5d6a539933f17b83680492
           <button
             type="submit"
             disabled={isPending}
@@ -135,6 +193,13 @@ export default function LoginPage() {
           </button>
         </form>
 
+<<<<<<< HEAD
+        <div className="mt-6 text-center space-y-3">
+          <div className="w-full h-px bg-border" />
+          <p className="text-muted text-xs">
+            ¿No tienes cuenta?{" "}
+            <Link href="/register" className="text-accent hover:text-white font-medium transition-colors">
+=======
         {/* Links */}
         <div className="mt-6 text-center space-y-3">
           <Link
@@ -150,6 +215,7 @@ export default function LoginPage() {
               href="/register"
               className="text-accent hover:text-white font-medium transition-colors"
             >
+>>>>>>> 30257b0bbc266734be5d6a539933f17b83680492
               Regístrate gratis
             </Link>
           </p>

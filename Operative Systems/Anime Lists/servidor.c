@@ -9,7 +9,7 @@
 #include "cifrado.h"
 #include <stdarg.h>
 
-static int g_shmid_global = -1;
+int g_shmid_global = -1;
 static int g_sem_mutex = -1;
 static int g_sem_servidor = -1;
 static int g_sem_cliente_resp = -1;

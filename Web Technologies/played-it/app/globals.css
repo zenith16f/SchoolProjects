@@ -1,5 +1,15 @@
 @import "tailwindcss";
 
+<<<<<<< HEAD
+@theme {
+  --color-surface: #14181c;
+  --color-surface-2: #1c2128;
+  --color-surface-3: #242b33;
+  --color-accent: #00e676;
+  --color-accent-dim: #00c853;
+  --color-muted: #8b9db0;
+  --color-border: #2a3340;
+=======
 /* ===== Tema PlayedIt — Tailwind v4 ===== */
 @theme {
   /* Colores de superficie */
@@ -16,17 +26,27 @@
   --color-border: #2a3340;
 
   /* Tipografía */
+>>>>>>> 30257b0bbc266734be5d6a539933f17b83680492
   --font-display: "Space Grotesk", sans-serif;
   --font-body: "Inter", sans-serif;
 }
 
+<<<<<<< HEAD
+=======
 /* ===== Base ===== */
+>>>>>>> 30257b0bbc266734be5d6a539933f17b83680492
 body {
   background-color: var(--color-surface);
   color: #ffffff;
   font-family: var(--font-body);
 }
 
+<<<<<<< HEAD
+/* Hero grid sutil */
+.hero-grid {
+  background-image:
+    linear-gradient(rgba(0, 230, 118, 0.04) 1px, transparent 1px),
+=======
 /* ===== Scrollbar personalizado ===== */
 ::-webkit-scrollbar {
   width: 6px;
@@ -45,15 +65,46 @@ body {
       rgba(0, 230, 118, 0.04) 1px,
       transparent 1px
     ),
+>>>>>>> 30257b0bbc266734be5d6a539933f17b83680492
     linear-gradient(90deg, rgba(0, 230, 118, 0.04) 1px, transparent 1px);
   background-size: 48px 48px;
 }
 
+<<<<<<< HEAD
+/* Logo glow */
+=======
 /* ===== Logo glow ===== */
+>>>>>>> 30257b0bbc266734be5d6a539933f17b83680492
 .logo-glow {
   text-shadow: 0 0 18px rgba(0, 230, 118, 0.5);
 }
 
+<<<<<<< HEAD
+/* Game card hover — solo transform, sin box-shadow costoso */
+.game-card {
+  transition: transform 0.15s ease;
+}
+.game-card:hover {
+  transform: translateY(-4px);
+}
+
+/* Focus del search */
+.search-bar:focus {
+  outline: 2px solid #00e676;
+  outline-offset: 1px;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--color-surface); }
+::-webkit-scrollbar-thumb { background: var(--color-border); border-radius: 3px; }
+
+/* Respetar preferencia de movimiento reducido */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+=======
 /* ===== Game card hover ===== */
 .game-card {
   transition: transform 0.2s ease, box-shadow 0.2s ease;
@@ -80,5 +131,6 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .game-card {
     transition: none;
+>>>>>>> 30257b0bbc266734be5d6a539933f17b83680492
   }
 }

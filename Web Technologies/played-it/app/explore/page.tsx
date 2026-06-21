@@ -1,9 +1,21 @@
+<<<<<<< HEAD
+import type { Metadata } from "next";
+=======
+>>>>>>> 30257b0bbc266734be5d6a539933f17b83680492
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import GameGrid from "@/components/GameGrid";
 import { exploreGames, getGenres } from "@/lib/rawg";
 import Link from "next/link";
 
+<<<<<<< HEAD
+export const metadata: Metadata = {
+  title: "Explorar juegos",
+  description: "Descubre los juegos mejor calificados, busca por nombre o filtra por género en PlayedIt.",
+};
+
+=======
+>>>>>>> 30257b0bbc266734be5d6a539933f17b83680492
 interface ExplorePageProps {
   searchParams: Promise<{
     q?: string;
@@ -46,7 +58,11 @@ export default async function ExplorePage({ searchParams }: ExplorePageProps) {
   return (
     <>
       <Navbar />
+<<<<<<< HEAD
+      <main id="main-content" className="flex-1">
+=======
       <main className="flex-1">
+>>>>>>> 30257b0bbc266734be5d6a539933f17b83680492
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
           {/* Header */}
           <div className="mb-8">

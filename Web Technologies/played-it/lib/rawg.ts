@@ -1,3 +1,7 @@
+// =====================================================
+// lib/rawg.ts — Funciones para consumir la API de RAWG.io
+// Docs: https://rawg.io/apidocs
+// =====================================================
 
 const BASE_URL = "https://api.rawg.io/api";
 
@@ -48,7 +52,7 @@ export interface RawgResponse<T> {
 
 // Obtener juegos populares / tendencias
 export async function getTrendingGames(
-  pageSize: number = 12
+  pageSize: number = 12,
 ): Promise<RawgGame[]> {
   const key = getApiKey();
   const url = `${BASE_URL}/games?key=${key}&ordering=-rating&page_size=${pageSize}&metacritic=80,100`;
@@ -63,7 +67,7 @@ export async function getTrendingGames(
 // Buscar juegos por texto
 export async function searchGames(
   query: string,
-  pageSize: number = 12
+  pageSize: number = 12,
 ): Promise<RawgGame[]> {
   const key = getApiKey();
   const url = `${BASE_URL}/games?key=${key}&search=${encodeURIComponent(query)}&page_size=${pageSize}`;
@@ -88,7 +92,7 @@ export async function getGameById(id: number): Promise<RawgGameDetail> {
 
 // Obtener screenshots de un juego
 export async function getGameScreenshots(
-  id: number
+  id: number,
 ): Promise<{ image: string; id: number }[]> {
   const key = getApiKey();
   const url = `${BASE_URL}/games/${id}/screenshots?key=${key}`;
@@ -103,7 +107,7 @@ export async function getGameScreenshots(
 // Obtener juegos por género
 export async function getGamesByGenre(
   genreSlug: string,
-  pageSize: number = 12
+  pageSize: number = 12,
 ): Promise<RawgGame[]> {
   const key = getApiKey();
   const url = `${BASE_URL}/games?key=${key}&genres=${genreSlug}&ordering=-rating&page_size=${pageSize}`;
@@ -144,7 +148,13 @@ export async function exploreGames(options: {
   ordering?: string;
 }): Promise<{ results: RawgGame[]; count: number; next: string | null }> {
   const key = getApiKey();
-  const { query, genre, page = 1, pageSize = 20, ordering = "-rating" } = options;
+  const {
+    query,
+    genre,
+    page = 1,
+    pageSize = 20,
+    ordering = "-rating",
+  } = options;
 
   const params = new URLSearchParams({
     key,
