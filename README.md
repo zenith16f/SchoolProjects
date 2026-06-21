@@ -37,7 +37,7 @@ SchoolProjects/
 | Data Bases | Finances Manager | TypeScript | Database-backed personal finance application |
 | Differential Equations | Second Grade ODE Solver | Python / Vue | Numerical methods and equation solvers for second-grade ODEs |
 | Operative Systems | — | C | Processes, memory management, and scheduling project |
-| Web Technologies | played-it | — | Web application built with modern frontend technologies |
+| Web Technologies | played-it | Typescript | Web application built with modern frontend technologies |
 
 ---
 
