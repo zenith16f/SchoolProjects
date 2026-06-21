@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import StarRating from "./StarRating";
-import ReviewForm from "./ReviewForm";
-import { deleteReview } from "@/lib/actions/reviews";
 import type { ReviewWithUser } from "@/lib/actions/reviews";
+import { deleteReview } from "@/lib/actions/reviews";
+import { useState, useTransition } from "react";
+import ReviewForm from "./ReviewForm";
+import StarRating from "./StarRating";
 
 interface ReviewCardProps {
   review: ReviewWithUser;
@@ -35,7 +35,9 @@ export default function ReviewCard({
   });
 
   const wasEdited =
-    new Date(review.updatedAt).getTime() - new Date(review.createdAt).getTime() > 1000;
+    new Date(review.updatedAt).getTime() -
+      new Date(review.createdAt).getTime() >
+    1000;
 
   // Si está en modo edición, mostrar el form
   if (isEditing) {
@@ -71,7 +73,7 @@ export default function ReviewCard({
       <div className="flex items-start justify-between gap-3 mb-3">
         <div className="flex items-center gap-3">
           {/* Avatar */}
-          <div className="w-8 h-8 rounded-full bg-accent/20 flex items-center justify-center flex-shrink-0">
+          <div className="w-8 h-8 rounded-full bg-accent/20 flex items-center justify-center shrink-0">
             <span className="text-accent text-xs font-display font-semibold">
               {review.usuario.username.charAt(0).toUpperCase()}
             </span>
@@ -82,7 +84,11 @@ export default function ReviewCard({
               <span className="text-white text-sm font-medium">
                 {review.usuario.username}
               </span>
-              <StarRating value={review.rating} readonly size="sm" />
+              <StarRating
+                value={review.rating}
+                readonly
+                size="sm"
+              />
             </div>
             <span className="text-muted text-xs">
               {fecha}

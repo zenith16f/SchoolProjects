@@ -1,21 +1,16 @@
-<<<<<<< HEAD
-import type { Metadata } from "next";
-=======
->>>>>>> 30257b0bbc266734be5d6a539933f17b83680492
-import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import GameGrid from "@/components/GameGrid";
+import Navbar from "@/components/Navbar";
 import { exploreGames, getGenres } from "@/lib/rawg";
+import type { Metadata } from "next";
 import Link from "next/link";
 
-<<<<<<< HEAD
 export const metadata: Metadata = {
   title: "Explorar juegos",
-  description: "Descubre los juegos mejor calificados, busca por nombre o filtra por género en PlayedIt.",
+  description:
+    "Descubre los juegos mejor calificados, busca por nombre o filtra por género en PlayedIt.",
 };
 
-=======
->>>>>>> 30257b0bbc266734be5d6a539933f17b83680492
 interface ExplorePageProps {
   searchParams: Promise<{
     q?: string;
@@ -58,11 +53,10 @@ export default async function ExplorePage({ searchParams }: ExplorePageProps) {
   return (
     <>
       <Navbar />
-<<<<<<< HEAD
-      <main id="main-content" className="flex-1">
-=======
-      <main className="flex-1">
->>>>>>> 30257b0bbc266734be5d6a539933f17b83680492
+      <main
+        id="main-content"
+        className="flex-1"
+      >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
           {/* Header */}
           <div className="mb-8">
@@ -84,7 +78,11 @@ export default async function ExplorePage({ searchParams }: ExplorePageProps) {
           </div>
 
           {/* Barra de búsqueda dedicada */}
-          <form action="/explore" method="GET" className="mb-6">
+          <form
+            action="/explore"
+            method="GET"
+            className="mb-6"
+          >
             <div className="flex gap-3">
               <div className="relative flex-1">
                 <svg
@@ -116,7 +114,13 @@ export default async function ExplorePage({ searchParams }: ExplorePageProps) {
               </button>
             </div>
             {/* Mantener filtros en la búsqueda */}
-            {genre && <input type="hidden" name="genre" value={genre} />}
+            {genre && (
+              <input
+                type="hidden"
+                name="genre"
+                value={genre}
+              />
+            )}
           </form>
 
           {/* Filtros por género */}
