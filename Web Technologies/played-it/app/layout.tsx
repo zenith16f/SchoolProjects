@@ -59,7 +59,7 @@ export default function RootLayout({
         <Providers>
           <a
             href="#main-content"
-            className="sr-only focus:not-sr-only focus:absolute focus:z-[100] focus:bg-accent focus:text-surface focus:px-4 focus:py-2 focus:rounded-md focus:top-2 focus:left-2"
+            className="sr-only focus:not-sr-only focus:absolute focus:z-100 focus:bg-accent focus:text-surface focus:px-4 focus:py-2 focus:rounded-md focus:top-2 focus:left-2"
           >
             Saltar al contenido
           </a>
