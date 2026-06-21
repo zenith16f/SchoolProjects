@@ -41,7 +41,10 @@ void MostrarReqsPass(WINDOW *w, int fila, const char *pass)
     wattroff(w, COLOR_PAIR(simb ? C_EXITO : C_ERROR));
     wrefresh(w);
 }
+<<<<<<< HEAD
 
+=======
+>>>>>>> 30257b0bbc266734be5d6a539933f17b83680492
 int ValidarPassFuerte(const char *p)
 {
     int ma = 0, mi = 0, nu = 0, si = 0, i, l = (int)strlen(p);

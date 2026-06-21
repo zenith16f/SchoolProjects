@@ -9,7 +9,10 @@ export default function Footer() {
           <span className="text-white font-medium">PlayedIt</span>. Todos los
           derechos reservados.
         </p>
-        <nav aria-label="Pie de página" className="flex items-center gap-5">
+        <nav
+          aria-label="Pie de página"
+          className="flex items-center gap-5"
+        >
           <Link
             href="#"
             className="text-muted hover:text-white text-xs transition-colors font-medium"

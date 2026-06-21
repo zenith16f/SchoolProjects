@@ -1,6 +1,6 @@
 /*
  * comunes.h - Estructuras y constantes del sistema gestor de anime
- * Prototipo Final - Sistemas Operativos - ESCOM IPN - Grupo 4CV4
+ * Proyecto - Sistemas Operativos - ESCOM IPN - Grupo 4CV4
  */
 #ifndef COMUNES_H
 #define COMUNES_H
@@ -18,34 +18,36 @@
 #include <ctype.h>
 #include <time.h>
 
+/* ======================== CONSTANTES ======================== */
 #define MAX_STR         128
-#define MAX_FRASE       512
+#define MAX_FRASE       256
 #define MAX_USER        32
 #define MAX_PASS        64
 #define MAX_HASH        65
 #define MAX_EMAIL       64
-#define MAX_NOMBRE      64
 #define MAX_ANIME       200
 #define MAX_LISTA       50
-#define MAX_CLIENTES    50
+#define MAX_CLIENTES    10
 #define PERMISOS        0644
 
+/* Archivos IPC */
 #define ARCHIVO_SHM     "ipc_shm"
 #define ARCHIVO_SEM     "ipc_sem"
 
+/* IDs para ftok - conexión global */
 #define ID_SHM_GLOBAL   'G'
 #define ID_SEM_MUTEX    'S'
 #define ID_SEM_SERVIDOR 'V'
 #define ID_SEM_CLIENTE  'C'
 
+/* Archivos de datos */
 #define ARCHIVO_USUARIOS    "datos/usuarios.dat"
 #define ARCHIVO_CATALOGO    "datos/catalogo.dat"
 #define ARCHIVO_VENTAS      "datos/ventas.dat"
-#define ARCHIVO_LOG         "datos/servidor.log"
 #define DIR_LISTAS          "datos/listas/"
 #define DIR_CARRITOS        "datos/carritos/"
 
-/* Operaciones cliente */
+/* Tipos de operación (cliente -> servidor) */
 #define OP_NADA             0
 #define OP_LOGIN            1
 #define OP_REGISTRO         2
@@ -53,15 +55,14 @@
 #define OP_AGREGAR_LISTA    4
 #define OP_VER_LISTA        5
 #define OP_ELIMINAR_LISTA   6
-#define OP_EDITAR_LISTA     7
-#define OP_VER_PERFIL       8
-#define OP_MODIFICAR_PERFIL 9
-#define OP_AGREGAR_CARRITO  10
-#define OP_VER_CARRITO      11
-#define OP_COMPRAR          12
+#define OP_VER_PERFIL       7
+#define OP_MODIFICAR_PERFIL 8
+#define OP_AGREGAR_CARRITO  9
+#define OP_VER_CARRITO      10
+#define OP_COMPRAR          11
 #define OP_DESCONECTAR      99
 
-/* Operaciones admin */
+/* Operaciones de admin */
 #define OP_ADMIN_LOGIN       101
 #define OP_ADMIN_ADD_ANIME   102
 #define OP_ADMIN_DEL_ANIME   103
@@ -69,40 +70,28 @@
 #define OP_ADMIN_VER_USERS   105
 #define OP_ADMIN_DEL_USER    106
 #define OP_ADMIN_REPORTE     107
-#define OP_ADMIN_REPORTE_D   108
-#define OP_ADMIN_REPORTE_S   109
-#define OP_ADMIN_REPORTE_M   110
 
-/* Respuestas */
+/* Códigos de respuesta */
 #define RESP_OK             0
 #define RESP_ERROR          1
 #define RESP_USER_EXISTS    2
 #define RESP_AUTH_FAIL      3
 #define RESP_NOT_FOUND      4
-#define RESP_NO_STOCK       5
 
 /* Roles */
-<<<<<<< HEAD
-#define SIN_ROL         -1
-=======
->>>>>>> 30257b0bbc266734be5d6a539933f17b83680492
 #define ROL_CLIENTE     0
 #define ROL_ADMIN       1
 
-/* Estados de anime */
+/* Estados de anime en lista personal */
 #define ESTADO_PLAN     0
 #define ESTADO_VIENDO   1
 #define ESTADO_COMPLETO 2
 #define ESTADO_PAUSADO  3
 #define ESTADO_DROPPED  4
 
-/*operaciones*/
-int EnviarOp(int op);
-int ServidorActivo(void);
-void MostrarDesconexion(void);
-
 /* ======================== ESTRUCTURAS ======================== */
 
+/* Anime del catálogo */
 typedef struct {
     int id;
     char titulo[MAX_STR];
@@ -110,19 +99,20 @@ typedef struct {
     int episodios;
     int anio;
     float precio;
-    int stock;
     int activo;
 } Anime;
 
+/* Usuario registrado */
 typedef struct {
     int id;
     char usuario[MAX_USER];
     char hash[MAX_HASH];
     char email[MAX_EMAIL];
-    char nombre[MAX_NOMBRE];
+    char nombre[MAX_STR];
     int activo;
 } Usuario;
 
+/* Item en lista personal */
 typedef struct {
     int anime_id;
     int estado;
@@ -130,37 +120,40 @@ typedef struct {
     int puntuacion;
 } ItemLista;
 
+/* Item en carrito */
 typedef struct {
     int anime_id;
     int cantidad;
 } ItemCarrito;
 
+/* Venta registrada */
 typedef struct {
     int usuario_id;
     int anime_id;
     float monto;
-    int cantidad;
     time_t fecha;
 } Venta;
 
+/* ======================== MEMORIA COMPARTIDA PRIVADA ======================== */
 /*
- * MemoriaPrivada - Segmento EXCLUSIVO por cada cliente-hilo.
- * Se crea con IPC_PRIVATE (sin ftok) para soportar N clientes sin límite.
+ * Cada cliente tiene su propio segmento de memoria compartida
+ * con el hilo del servidor que lo atiende.
  */
 typedef struct {
+    /* Solicitud del cliente al servidor */
     int operacion;
     int param_int;
     int param_int2;
-    int param_int3;
     char param_str[MAX_STR];
     char param_str2[MAX_STR];
     char param_str3[MAX_STR];
-    char param_str4[MAX_NOMBRE];
     float param_float;
 
+    /* Respuesta del servidor al cliente */
     int respuesta_codigo;
     char respuesta_msg[MAX_FRASE];
 
+    /* Datos de respuesta */
     Anime animes[MAX_ANIME];
     int num_animes;
     ItemLista lista[MAX_LISTA];
@@ -169,31 +162,24 @@ typedef struct {
     int num_carrito;
     Usuario usuario_resp;
 
+    /* Control */
     pid_t cliente_pid;
+    int cliente_listo;
+    int servidor_listo;
     int sesion_activa;
     int usuario_id;
     char usuario_nombre[MAX_USER];
 } MemoriaPrivada;
 
-/*
- * MemoriaGlobal - Un solo segmento para el handshake de conexión.
- * Después de conectarse, el cliente usa solo su MemoriaPrivada.
- */
+/* Memoria compartida global para la conexión inicial */
 typedef struct {
     int servidor_activo;
     int solicitud_conexion;
     pid_t cliente_pid;
-    int rol;
-    int shmid_privado;
-    int sem_cli_listo;
-    int sem_srv_listo;
+    int rol;                     /* ROL_CLIENTE o ROL_ADMIN */
+    key_t llave_privada;         /* Clave para la memoria privada */
+    int sem_cli_listo;           /* Semáforo: cliente tiene datos listos */
+    int sem_srv_listo;           /* Semáforo: servidor tiene respuesta */
 } MemoriaGlobal;
 
-/*Memoria*/
-extern MemoriaPrivada *g_mp;
-extern int g_sem_cli , g_sem_srv;
-extern int g_shmid_global;
-extern MemoriaGlobal *g_global_ref;
-extern int g_desconectado;
-
-#endif
+#endif /* COMUNES_H */

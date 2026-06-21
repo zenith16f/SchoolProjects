@@ -1,6 +1,6 @@
+import type { RawgGame } from "@/lib/rawg";
 import Image from "next/image";
 import Link from "next/link";
-import type { RawgGame } from "@/lib/rawg";
 
 interface GameCardProps {
   game: RawgGame;
@@ -14,7 +14,10 @@ export default function GameCard({ game }: GameCardProps) {
   const genre = game.genres?.[0]?.name ?? "Juego";
 
   return (
-    <Link href={`/game/${game.id}`} className="game-card cursor-pointer group">
+    <Link
+      href={`/game/${game.id}`}
+      className="game-card cursor-pointer group"
+    >
       {/* Portada */}
       <div className="aspect-[3/4] rounded-lg bg-surface-3 border border-border overflow-hidden mb-2 relative">
         {game.background_image ? (
