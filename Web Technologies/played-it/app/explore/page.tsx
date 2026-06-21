@@ -1,8 +1,14 @@
+import type { Metadata } from "next";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import GameGrid from "@/components/GameGrid";
 import { exploreGames, getGenres } from "@/lib/rawg";
 import Link from "next/link";
+
+export const metadata: Metadata = {
+  title: "Explorar juegos",
+  description: "Descubre los juegos mejor calificados, busca por nombre o filtra por género en PlayedIt.",
+};
 
 interface ExplorePageProps {
   searchParams: Promise<{
@@ -46,7 +52,7 @@ export default async function ExplorePage({ searchParams }: ExplorePageProps) {
   return (
     <>
       <Navbar />
-      <main className="flex-1">
+      <main id="main-content" className="flex-1">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
           {/* Header */}
           <div className="mb-8">

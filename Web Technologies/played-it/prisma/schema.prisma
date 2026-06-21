@@ -1,0 +1,73 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// === ENUMS ===
+
+enum EstadoJuego {
+  jugado
+  jugando
+  por_jugar
+  abandonado
+  favorito
+}
+
+// === MODELOS ===
+
+model Usuario {
+  id        String   @id @default(uuid()) @db.Uuid
+  username  String   @unique @db.VarChar(50)
+  email     String   @unique @db.VarChar(100)
+  password  String   @db.VarChar(255)
+  avatar    String?  @db.VarChar(500)
+  activo    Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  resenas       Resena[]
+  listasJuegos  ListaJuego[]
+
+  @@index([email])
+  @@index([username])
+  @@map("usuarios")
+}
+
+model Resena {
+  id          String   @id @default(uuid()) @db.Uuid
+  userId      String   @db.Uuid
+  rawgGameId  Int
+  gameName    String   @db.VarChar(200)
+  gameImage   String?  @db.VarChar(500)
+  rating      Int      @db.SmallInt
+  contenido   String   @db.Text
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @default(now()) @updatedAt
+
+  usuario     Usuario  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, rawgGameId])
+  @@index([rawgGameId])
+  @@index([userId])
+  @@index([createdAt(sort: Desc)])
+  @@map("resenas")
+}
+
+model ListaJuego {
+  id          String      @id @default(uuid()) @db.Uuid
+  userId      String      @db.Uuid
+  rawgGameId  Int
+  gameName    String      @db.VarChar(200)
+  gameImage   String?     @db.VarChar(500)
+  estado      EstadoJuego @default(por_jugar)
+  createdAt   DateTime    @default(now())
+
+  usuario     Usuario     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, rawgGameId])
+  @@index([userId, estado])
+  @@map("listas_juegos")
+}

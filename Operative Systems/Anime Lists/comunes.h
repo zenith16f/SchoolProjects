@@ -82,6 +82,7 @@
 #define RESP_NO_STOCK       5
 
 /* Roles */
+#define SIN_ROL         -1
 #define ROL_CLIENTE     0
 #define ROL_ADMIN       1
 
@@ -91,6 +92,11 @@
 #define ESTADO_COMPLETO 2
 #define ESTADO_PAUSADO  3
 #define ESTADO_DROPPED  4
+
+/*operaciones*/
+int EnviarOp(int op);
+int ServidorActivo(void);
+void MostrarDesconexion(void);
 
 /* ======================== ESTRUCTURAS ======================== */
 
@@ -179,5 +185,12 @@ typedef struct {
     int sem_cli_listo;
     int sem_srv_listo;
 } MemoriaGlobal;
+
+/*Memoria*/
+extern MemoriaPrivada *g_mp;
+extern int g_sem_cli , g_sem_srv;
+extern int g_shmid_global;
+extern MemoriaGlobal *g_global_ref;
+extern int g_desconectado;
 
 #endif

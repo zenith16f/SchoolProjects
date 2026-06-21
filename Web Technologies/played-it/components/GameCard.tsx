@@ -23,7 +23,7 @@ export default function GameCard({ game }: GameCardProps) {
             alt={game.name}
             fill
             sizes="(max-width: 640px) 50vw, (max-width: 1024px) 25vw, 16vw"
-            className="object-cover opacity-70 group-hover:opacity-100 transition-opacity"
+            className="object-cover opacity-80 group-hover:opacity-100"
             loading="lazy"
           />
         ) : (

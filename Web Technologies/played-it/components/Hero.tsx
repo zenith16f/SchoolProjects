@@ -11,7 +11,7 @@ export default function Hero() {
       <div className="relative max-w-3xl mx-auto text-center">
         {/* Etiqueta superior */}
         <span className="inline-flex items-center gap-2 text-accent text-xs font-medium tracking-widest uppercase mb-6 border border-accent/20 bg-accent/5 px-3 py-1 rounded-full">
-          <span className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" />
+          <span className="w-1.5 h-1.5 rounded-full bg-accent inline-block" />
           Comunidad gamer
         </span>
 

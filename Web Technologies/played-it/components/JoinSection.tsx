@@ -24,8 +24,9 @@ export default function JoinSection() {
               href="/register"
               className="w-full sm:w-auto bg-accent hover:bg-accent-dim text-surface font-display font-semibold px-8 py-3 rounded-xl transition-colors text-sm text-center inline-block"
             >
-              Unirse
+              Unirme — es gratis
             </Link>
+            <span className="text-muted text-xs">Sin tarjeta de crédito</span>
           </div>
         </div>
       </div>
