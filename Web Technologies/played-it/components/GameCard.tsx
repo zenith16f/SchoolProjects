@@ -19,7 +19,7 @@ export default function GameCard({ game }: GameCardProps) {
       className="game-card cursor-pointer group"
     >
       {/* Portada */}
-      <div className="aspect-[3/4] rounded-lg bg-surface-3 border border-border overflow-hidden mb-2 relative">
+      <div className="aspect-3/4 rounded-lg bg-surface-3 border border-border overflow-hidden mb-2 relative">
         {game.background_image ? (
           <Image
             src={game.background_image}

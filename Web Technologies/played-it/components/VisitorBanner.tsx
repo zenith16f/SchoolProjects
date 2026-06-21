@@ -28,7 +28,7 @@ export default function VisitorBanner() {
       </p>
       <button
         onClick={() => setDismissed(true)}
-        className="flex-shrink-0 text-muted hover:text-white"
+        className="shrink-0 text-muted hover:text-white"
         aria-label="Cerrar banner"
       >
         <svg

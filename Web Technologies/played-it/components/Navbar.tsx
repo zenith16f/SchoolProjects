@@ -19,7 +19,7 @@ export default function Navbar() {
       >
         <Link
           href="/"
-          className="flex-shrink-0 flex items-center gap-2"
+          className="shrink-0 flex items-center gap-2"
           aria-label="PlayedIt inicio"
         >
           <span className="bg-accent text-surface font-display font-bold text-sm px-2 py-0.5 rounded select-none">
@@ -79,7 +79,7 @@ export default function Navbar() {
                 href="/profile"
                 className="flex items-center gap-2 text-sm text-muted hover:text-white px-3 py-2 rounded-md font-medium"
               >
-                <span className="w-6 h-6 rounded-full bg-accent/20 flex items-center justify-center flex-shrink-0">
+                <span className="w-6 h-6 rounded-full bg-accent/20 flex items-center justify-center shrink-0">
                   <span className="text-accent text-xs font-display font-semibold">
                     {session.user.name?.charAt(0).toUpperCase()}
                   </span>

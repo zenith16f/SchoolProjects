@@ -5,7 +5,7 @@ export default function Hero() {
     <section className="hero-grid relative overflow-hidden px-4 sm:px-6 lg:px-8 pt-20 pb-24">
       {/* Glow de fondo */}
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-        <div className="w-[600px] h-[600px] rounded-full bg-accent/5 blur-[120px]" />
+        <div className="w-150 h-150 rounded-full bg-accent/5 blur-[120px]" />
       </div>
 
       <div className="relative max-w-3xl mx-auto text-center">
