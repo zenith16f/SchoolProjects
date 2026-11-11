@@ -1,0 +1,795 @@
+---
+import Base from "../layouts/Base.astro";
+import { analyzeCidr } from "../lib/ip";
+import { calculateVlsm } from "../lib/vlsm";
+
+const example = analyzeCidr("172.16.5.130/26");
+
+const prefixes = [8, 16, 20, 24, 25, 26, 27, 28, 29, 30, 31, 32].map(
+  (prefix) => {
+    const data = analyzeCidr(`192.168.0.0/${prefix}`);
+    return {
+      prefix,
+      mask: data.maskText,
+      total: data.totalAddresses,
+      usable: data.usableHosts,
+      note:
+        prefix === 31
+          ? "Enlace punto a punto (RFC 3021)"
+          : prefix === 32
+            ? "Una sola dirección"
+            : "",
+    };
+  },
+);
+
+const vlsm = calculateVlsm("192.168.0.0", 24, [
+  { name: "A", hosts: 100 },
+  { name: "B", hosts: 50 },
+  { name: "C", hosts: 25 },
+  { name: "D", hosts: 10 },
+]);
+
+const cases = [
+  {
+    tool: "CIDR",
+    input: "192.168.10.0/24",
+    expected: "Red 192.168.10.0 · broadcast .255 · 254 hosts",
+  },
+  {
+    tool: "CIDR",
+    input: "172.16.5.130/26",
+    expected: "Red 172.16.5.128 · broadcast .191 · 62 hosts",
+  },
+  {
+    tool: "CIDR",
+    input: "10.20.30.40/8",
+    expected: "Red 10.0.0.0 · broadcast 10.255.255.255",
+  },
+  {
+    tool: "CIDR",
+    input: "203.0.113.0/30",
+    expected: "Red .0 · rango .1–.2 · broadcast .3 · 2 hosts",
+  },
+  {
+    tool: "CIDR",
+    input: "255.255.255.0 (máscara)",
+    expected: "Prefijo /24 y wildcard 0.0.0.255",
+  },
+  {
+    tool: "VLSM",
+    input: "192.168.0.0/24 · A=100 B=50 C=25 D=10",
+    expected: "A /25 · B /26 · C /27 · D /28 · libre .240/28",
+  },
+  {
+    tool: "VLSM",
+    input: "10.0.0.0/16 · Ventas=500 TI=200 RH=100 Almacén=50 Dirección=20",
+    expected: "500 → /23, 200 → /24, 100 → /25, 50 → /26, 20 → /27",
+  },
+  {
+    tool: "VLSM",
+    input: "192.168.0.0/24 · A=200 B=100",
+    expected: "Error: la base no alcanza; sugiere /23",
+  },
+];
+
+const errors = [
+  {
+    title: "Octeto fuera de rango",
+    body: "Cada octeto debe estar entre 0 y 255. «300.1.1.1» se rechaza antes de calcular.",
+  },
+  {
+    title: "Máscara no contigua",
+    body: "255.0.255.0 no es una máscara válida: los unos deben ir a la izquierda y los ceros a la derecha.",
+  },
+  {
+    title: "Prefijo fuera de 0–32",
+    body: "El prefijo indica cuántos bits son de red; solo puede ser un entero de 0 a 32.",
+  },
+  {
+    title: "Hosts inválidos en VLSM",
+    body: "Cada subred debe pedir al menos 1 host. Los valores vacíos, negativos o decimales se marcan en la fila.",
+  },
+  {
+    title: "La red base no alcanza",
+    body: "Si la suma de bloques supera la base, la herramienta muestra cuántas direcciones faltan y qué prefijo conviene usar.",
+  },
+];
+
+const steps = [
+  {
+    number: "01",
+    title: "Validar y ordenar",
+    body: "Se revisa cada requerimiento y se ordena de mayor a menor por direcciones necesarias (hosts + 2). Los empates conservan el orden de captura.",
+  },
+  {
+    number: "02",
+    title: "Elegir la máscara mínima",
+    body: "Para n hosts se busca la menor potencia de dos que cumpla 2^k − 2 ≥ n. El prefijo es 32 − k.",
+  },
+  {
+    number: "03",
+    title: "Asignar bloques contiguos",
+    body: "Cada subred toma el siguiente bloque alineado desde el inicio de la red base. El puntero avanza el tamaño del bloque.",
+  },
+  {
+    number: "04",
+    title: "Calcular y verificar",
+    body: "Se obtienen red, rango y broadcast de cada bloque. Al ser contiguos y estar alineados, no hay solapamientos.",
+  },
+];
+---
+
+<Base
+  title="Guía de cálculo"
+  description="Teoría, fórmulas, algoritmo paso a paso y casos de prueba de las calculadoras CIDR y VLSM."
+>
+  <!-- Portada -->
+  <section class="container-page pt-10 sm:pt-14">
+    <div class="max-w-3xl">
+      <p class="eyebrow">Documentación · Guía de cálculo</p>
+      <h1 class="mt-3 text-4xl font-semibold text-bone-50 sm:text-5xl">
+        De la teoría a la <span class="text-ip-blue">subred</span>
+      </h1>
+      <p class="mt-4 text-sm leading-relaxed text-meteor-300 sm:text-base">
+        Todo lo que hay detrás de las dos calculadoras: cómo se representa una
+        IPv4, qué significan la máscara y el prefijo, cómo se obtiene el rango
+        de hosts y cómo reparte direcciones el algoritmo VLSM. Incluye los casos
+        de prueba que se usaron para validar el proyecto.
+      </p>
+    </div>
+
+    <nav class="mt-7 flex flex-wrap gap-2" aria-label="Contenido de la guía">
+      <a href="#fundamentos" class="chip chip-button">Fundamentos</a>
+      <a href="#cidr" class="chip chip-button">CIDR</a>
+      <a href="#vlsm" class="chip chip-button">VLSM</a>
+      <a href="#algoritmo" class="chip chip-button">Algoritmo</a>
+      <a href="#uso" class="chip chip-button">Uso de las herramientas</a>
+      <a href="#pruebas" class="chip chip-button">Casos de prueba</a>
+      <a href="#errores" class="chip chip-button">Errores comunes</a>
+    </nav>
+  </section>
+
+  <!-- Fundamentos -->
+  <section id="fundamentos" class="container-page mt-12 scroll-mt-24 sm:mt-16">
+    <div class="grid gap-5 lg:grid-cols-[1.1fr_0.9fr]">
+      <div class="panel p-6 sm:p-8">
+        <p class="eyebrow">Punto de partida</p>
+        <h2 class="mt-2 text-2xl font-semibold text-bone-50 sm:text-3xl">
+          Una IPv4 son 32 bits
+        </h2>
+        <p class="mt-4 text-sm leading-relaxed text-meteor-300">
+          Una dirección IPv4 se escribe como cuatro octetos decimales separados
+          por puntos. Cada octeto son 8 bits, así que la dirección completa son
+          32 bits. La <strong class="text-bone-100">máscara</strong> marca con
+          unos los bits de red y con ceros los bits de host; el
+          <strong class="text-bone-100">prefijo</strong> es simplemente la
+          cantidad de unos iniciales.
+        </p>
+        <div class="mt-5 grid gap-3 sm:grid-cols-3">
+          <div class="panel-flat p-4">
+            <p class="text-[10px] uppercase tracking-wider text-meteor-500">Dirección</p>
+            <p class="mono mt-1 text-sm text-bone-100">192.168.10.0</p>
+            <p class="mono mt-1 text-[10px] text-meteor-500">11000000.10101000…</p>
+          </div>
+          <div class="panel-flat p-4">
+            <p class="text-[10px] uppercase tracking-wider text-meteor-500">Máscara /24</p>
+            <p class="mono mt-1 text-sm text-bone-100">255.255.255.0</p>
+            <p class="mono mt-1 text-[10px] text-meteor-500">11111111.11111111…</p>
+          </div>
+          <div class="panel-flat p-4">
+            <p class="text-[10px] uppercase tracking-wider text-meteor-500">Bits de host</p>
+            <p class="mono mt-1 text-sm text-ip-green-soft">8</p>
+            <p class="mt-1 text-[10px] text-meteor-500">2⁸ = 256 direcciones</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel p-6 sm:p-8">
+        <h2 class="text-xl font-semibold text-bone-50">Las cuatro operaciones</h2>
+        <p class="mt-2 text-sm leading-relaxed text-meteor-300">
+          Con la IP y la máscara como enteros de 32 bits, todo se reduce a
+          aritmética de bits.
+        </p>
+        <dl class="mt-5 space-y-4">
+          <div>
+            <dt class="mono text-xs text-ip-blue-soft">Red = IP AND máscara</dt>
+            <dd class="mt-1 text-sm leading-relaxed text-meteor-300">
+              Conserva los bits de red y pone en cero los de host.
+            </dd>
+          </div>
+          <div>
+            <dt class="mono text-xs text-ip-red-soft">Broadcast = red OR wildcard</dt>
+            <dd class="mt-1 text-sm leading-relaxed text-meteor-300">
+              El wildcard es la máscara invertida; enciende todos los bits de host.
+            </dd>
+          </div>
+          <div>
+            <dt class="mono text-xs text-ip-green-soft">Primer host = red + 1</dt>
+            <dd class="mt-1 text-sm leading-relaxed text-meteor-300">
+              La primera dirección utilizable después de la de red.
+            </dd>
+          </div>
+          <div>
+            <dt class="mono text-xs text-bone-200">Último host = broadcast − 1</dt>
+            <dd class="mt-1 text-sm leading-relaxed text-meteor-300">
+              La última dirección utilizable antes del broadcast.
+            </dd>
+          </div>
+        </dl>
+      </div>
+    </div>
+  </section>
+
+  <!-- CIDR -->
+  <section id="cidr" class="container-page mt-16 scroll-mt-24 sm:mt-20">
+    <div class="max-w-2xl">
+      <p class="eyebrow">Herramienta 01</p>
+      <h2 class="mt-2 text-3xl font-semibold text-bone-50 sm:text-4xl">
+        CIDR: analizar y dividir
+      </h2>
+      <p class="mt-3 text-sm leading-relaxed text-meteor-300">
+        CIDR (Classless Inter-Domain Routing) sustituyó las clases fijas A, B y
+        C por un prefijo que puede tomar cualquier valor de 0 a 32. Eso permite
+        asignar bloques del tamaño exacto que se necesita.
+      </p>
+    </div>
+
+    <div class="mt-8 grid gap-5 lg:grid-cols-[0.95fr_1.05fr]">
+      <div class="panel p-6 sm:p-7">
+        <h3 class="text-lg font-semibold text-bone-50">Fórmulas</h3>
+        <div class="mt-4 space-y-3">
+          <div class="rounded-xl border border-white/10 bg-meteor-950/60 p-4">
+            <p class="text-[10px] uppercase tracking-wider text-meteor-500">Direcciones totales</p>
+            <p class="mono mt-1 text-sm text-bone-100">2<sup>32 − prefijo</sup></p>
+          </div>
+          <div class="rounded-xl border border-white/10 bg-meteor-950/60 p-4">
+            <p class="text-[10px] uppercase tracking-wider text-meteor-500">Hosts útiles</p>
+            <p class="mono mt-1 text-sm text-bone-100">2<sup>32 − prefijo</sup> − 2</p>
+            <p class="mt-1 text-[11px] leading-relaxed text-meteor-500">
+              Se restan la dirección de red y la de broadcast. Con /31 y /32 se
+              aplican las reglas especiales de la tabla.
+            </p>
+          </div>
+          <div class="rounded-xl border border-white/10 bg-meteor-950/60 p-4">
+            <p class="text-[10px] uppercase tracking-wider text-meteor-500">Wildcard</p>
+            <p class="mono mt-1 text-sm text-bone-100">255.255.255.255 − máscara</p>
+          </div>
+          <div class="rounded-xl border border-white/10 bg-meteor-950/60 p-4">
+            <p class="text-[10px] uppercase tracking-wider text-meteor-500">Nuevo prefijo al dividir en s subredes</p>
+            <p class="mono mt-1 text-sm text-bone-100">prefijo + ⌈log₂ s⌉</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel overflow-hidden">
+        <div class="border-b border-white/[0.07] p-5 sm:p-6">
+          <p class="eyebrow">Ejemplo resuelto</p>
+          <h3 class="mt-1 text-lg font-semibold text-bone-50">
+            <span class="mono text-ip-blue-soft">172.16.5.130/26</span>
+          </h3>
+          <p class="mt-2 text-sm leading-relaxed text-meteor-300">
+            El prefijo /26 deja 6 bits de host. La dirección cae dentro del
+            bloque .128, no en el .0: por eso la red no es .0.
+          </p>
+        </div>
+        <div class="table-wrap rounded-none border-0">
+          <table class="data-table min-w-[420px]">
+            <tbody>
+              <tr>
+                <td class="text-meteor-400">Máscara</td>
+                <td class="mono text-bone-100">{example.maskText}</td>
+              </tr>
+              <tr>
+                <td class="text-meteor-400">Wildcard</td>
+                <td class="mono text-bone-100">{example.wildcardText}</td>
+              </tr>
+              <tr>
+                <td class="text-meteor-400">Red</td>
+                <td class="mono text-ip-blue-soft">{example.networkText}/{example.prefix}</td>
+              </tr>
+              <tr>
+                <td class="text-meteor-400">Primer host</td>
+                <td class="mono text-ip-green-soft">{example.firstHostText}</td>
+              </tr>
+              <tr>
+                <td class="text-meteor-400">Último host</td>
+                <td class="mono text-ip-green-soft">{example.lastHostText}</td>
+              </tr>
+              <tr>
+                <td class="text-meteor-400">Broadcast</td>
+                <td class="mono text-ip-red-soft">{example.broadcastText}</td>
+              </tr>
+              <tr>
+                <td class="text-meteor-400">Hosts útiles</td>
+                <td class="mono text-bone-100">{example.usableHosts}</td>
+              </tr>
+              <tr>
+                <td class="text-meteor-400">Total de direcciones</td>
+                <td class="mono text-bone-100">{example.totalAddresses}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="border-t border-white/[0.06] p-4 text-xs leading-relaxed text-meteor-500">
+          Comprobación: 2⁶ = 64 direcciones; 64 − 2 = 62 hosts. El bloque va de
+          .128 a .191.
+        </p>
+      </div>
+    </div>
+
+    <!-- Tabla de prefijos -->
+    <div class="panel mt-5 overflow-hidden">
+      <div class="border-b border-white/[0.07] p-5 sm:p-6">
+        <h3 class="text-lg font-semibold text-bone-50">Prefijos que más se usan</h3>
+        <p class="mt-1 text-sm text-meteor-400">
+          Calculados con la misma librería que usa la aplicación.
+        </p>
+      </div>
+      <div class="table-wrap rounded-none border-0">
+        <table class="data-table min-w-[560px]">
+          <thead>
+            <tr>
+              <th>Prefijo</th>
+              <th>Máscara</th>
+              <th class="text-right">Direcciones</th>
+              <th class="text-right">Hosts útiles</th>
+              <th class="hidden sm:table-cell">Nota</th>
+            </tr>
+          </thead>
+          <tbody>
+            {
+              prefixes.map((row) => (
+                <tr>
+                  <td class="mono text-ip-blue-soft">/{row.prefix}</td>
+                  <td class="mono whitespace-nowrap text-bone-100">{row.mask}</td>
+                  <td class="mono text-right text-meteor-200">
+                    {row.total.toLocaleString("es-MX")}
+                  </td>
+                  <td class="mono text-right text-bone-100">
+                    {row.usable.toLocaleString("es-MX")}
+                  </td>
+                  <td class="hidden text-xs text-meteor-500 sm:table-cell">
+                    {row.note || "—"}
+                  </td>
+                </tr>
+              ))
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="mt-5 grid gap-4 sm:grid-cols-3">
+      <article class="panel-flat p-5">
+        <span class="tag tag-blue">Dividir por subredes</span>
+        <p class="mt-3 text-sm leading-relaxed text-meteor-300">
+          Si necesitas 4 subredes, se agregan 2 bits al prefijo (2² = 4). Una
+          /24 se convierte en cuatro /26.
+        </p>
+      </article>
+      <article class="panel-flat p-5">
+        <span class="tag tag-green">Dividir por hosts</span>
+        <p class="mt-3 text-sm leading-relaxed text-meteor-300">
+          Si cada subred debe tener 50 hosts, se buscan 6 bits de host (62
+          útiles) y el prefijo queda en /26.
+        </p>
+      </article>
+      <article class="panel-flat p-5">
+        <span class="tag tag-neutral">Bloques alineados</span>
+        <p class="mt-3 text-sm leading-relaxed text-meteor-300">
+          El tamaño de un bloque siempre es potencia de dos y empieza en un
+          múltiplo de ese tamaño.
+        </p>
+      </article>
+    </div>
+  </section>
+
+  <!-- VLSM -->
+  <section id="vlsm" class="container-page mt-16 scroll-mt-24 sm:mt-20">
+    <div class="max-w-2xl">
+      <p class="eyebrow">Herramienta 02</p>
+      <h2 class="mt-2 text-3xl font-semibold text-bone-50 sm:text-4xl">
+        VLSM: una máscara para cada necesidad
+      </h2>
+      <p class="mt-3 text-sm leading-relaxed text-meteor-300">
+        Con máscara fija, todas las subredes tienen el mismo tamaño. Si una
+        necesita 100 hosts y otra solo 10, la segunda desperdicia casi todo su
+        bloque. VLSM permite máscaras distintas dentro de la misma red base.
+      </p>
+    </div>
+
+    <div class="mt-8 grid gap-5 lg:grid-cols-[1.15fr_0.85fr]">
+      <div class="panel overflow-hidden">
+        <div class="border-b border-white/[0.07] p-5 sm:p-6">
+          <p class="eyebrow">Caso del PDF</p>
+          <h3 class="mt-1 text-lg font-semibold text-bone-50">
+            <span class="mono text-ip-green-soft">192.168.0.0/24</span> con A=100,
+            B=50, C=25 y D=10
+          </h3>
+        </div>
+        <div class="table-wrap rounded-none border-0">
+          <table class="data-table min-w-[620px]">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Subred</th>
+                <th>Pedidos</th>
+                <th>Bloque</th>
+                <th>Máscara</th>
+                <th>Rango de hosts</th>
+                <th class="text-right">Útiles</th>
+              </tr>
+            </thead>
+            <tbody>
+              {
+                vlsm.subnets.map((subnet, index) => (
+                  <tr>
+                    <td class="mono text-meteor-500">{index + 1}</td>
+                    <td class="font-medium text-bone-100">{subnet.name}</td>
+                    <td class="mono text-meteor-300">{subnet.requestedHosts}</td>
+                    <td class="mono whitespace-nowrap text-bone-100">{subnet.cidr}</td>
+                    <td class="mono whitespace-nowrap text-meteor-300">{subnet.maskText}</td>
+                    <td class="mono whitespace-nowrap text-meteor-200">
+                      {subnet.firstHostText} – {subnet.lastHostText}
+                    </td>
+                    <td class="mono text-right text-bone-100">{subnet.usableHosts}</td>
+                  </tr>
+                ))
+              }
+            </tbody>
+          </table>
+        </div>
+        <div class="grid grid-cols-2 gap-2 border-t border-white/[0.06] p-4 text-center sm:grid-cols-4">
+          <div>
+            <p class="text-[10px] uppercase tracking-wider text-meteor-500">Asignadas</p>
+            <p class="mono mt-1 text-sm text-bone-100">{vlsm.assignedAddresses} / {vlsm.baseSize}</p>
+          </div>
+          <div>
+            <p class="text-[10px] uppercase tracking-wider text-meteor-500">Libres</p>
+            <p class="mono mt-1 text-sm text-ip-green-soft">{vlsm.freeAddresses}</p>
+          </div>
+          <div>
+            <p class="text-[10px] uppercase tracking-wider text-meteor-500">Holgura</p>
+            <p class="mono mt-1 text-sm text-bone-100">{vlsm.slackAddresses}</p>
+          </div>
+          <div>
+            <p class="text-[10px] uppercase tracking-wider text-meteor-500">Aprovechamiento</p>
+            <p class="mono mt-1 text-sm text-ip-red-soft">{vlsm.efficiency.toFixed(1)} %</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="space-y-4">
+        <div class="panel p-5 sm:p-6">
+          <h3 class="text-lg font-semibold text-bone-50">Cómo se elige cada máscara</h3>
+          <ol class="mt-4 space-y-3">
+            {
+              vlsm.subnets.map((subnet) => (
+                <li class="flex gap-3 text-sm">
+                  <span class="step-number">{subnet.index + 1}</span>
+                  <p class="leading-relaxed text-meteor-300">
+                    <strong class="text-bone-100">{subnet.name}:</strong>{" "}
+                    {subnet.requestedHosts} + 2 = {subnet.requestedHosts + 2}{" "}
+                    direcciones → bloque de {subnet.blockSize} →{" "}
+                    <span class="mono text-ip-blue-soft">/{subnet.prefix}</span>
+                  </p>
+                </li>
+              ))
+            }
+          </ol>
+        </div>
+
+        <div class="panel p-5 sm:p-6">
+          <h3 class="text-lg font-semibold text-bone-50">Bloque libre</h3>
+          <p class="mt-2 text-sm leading-relaxed text-meteor-300">
+            Después de D termina en .239; el resto de la /24 queda como un
+            bloque alineado de 16 direcciones:
+          </p>
+          <div class="mt-3 flex flex-wrap gap-2">
+            {
+              vlsm.freeBlocks.map((block) => (
+                <span class="chip">
+                  <span class="dot bg-meteor-500" />
+                  <span class="mono">{block.cidr}</span>
+                  <span class="text-meteor-500">{block.size} dirs</span>
+                </span>
+              ))
+            }
+          </div>
+          <p class="mt-3 text-xs leading-relaxed text-meteor-500">
+            Ese bloque podría ser una futura subred /28 con 14 hosts útiles.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <div class="mt-5 grid gap-4 sm:grid-cols-3">
+      <article class="panel-flat p-5">
+        <p class="text-[10px] uppercase tracking-wider text-meteor-500">Desperdicio del bloque</p>
+        <p class="mono mt-2 text-sm text-bone-100">útiles − pedidos</p>
+        <p class="mt-2 text-xs leading-relaxed text-meteor-400">
+          En A: 126 − 100 = 26 hosts de holgura. No cuenta red ni broadcast.
+        </p>
+      </article>
+      <article class="panel-flat p-5">
+        <p class="text-[10px] uppercase tracking-wider text-meteor-500">Reservadas por subred</p>
+        <p class="mono mt-2 text-sm text-bone-100">red + broadcast</p>
+        <p class="mt-2 text-xs leading-relaxed text-meteor-400">
+          Siempre son 2 por bloque (salvo /31 y /32). En el caso son 8 en total.
+        </p>
+      </article>
+      <article class="panel-flat p-5">
+        <p class="text-[10px] uppercase tracking-wider text-meteor-500">Aprovechamiento</p>
+        <p class="mono mt-2 text-sm text-bone-100">útiles / base × 100</p>
+        <p class="mt-2 text-xs leading-relaxed text-meteor-400">
+          Mide cuántas direcciones de la base quedan disponibles para hosts.
+        </p>
+      </article>
+    </div>
+  </section>
+
+  <!-- Algoritmo -->
+  <section id="algoritmo" class="container-page mt-16 scroll-mt-24 sm:mt-20">
+    <div class="max-w-2xl">
+      <p class="eyebrow">Paso a paso</p>
+      <h2 class="mt-2 text-3xl font-semibold text-bone-50 sm:text-4xl">
+        El algoritmo VLSM
+      </h2>
+      <p class="mt-3 text-sm leading-relaxed text-meteor-300">
+        La implementación está en <span class="mono text-xs text-bone-200">src/lib/vlsm.ts</span>.
+        Estos son los cuatro pasos que ejecuta cada vez que cambias un dato.
+      </p>
+    </div>
+
+    <div class="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      {
+        steps.map((step) => (
+          <article class="panel-flat p-5">
+            <span class="step-number">{step.number}</span>
+            <h3 class="mt-4 text-base font-semibold text-bone-50">{step.title}</h3>
+            <p class="mt-2 text-sm leading-relaxed text-meteor-300">{step.body}</p>
+          </article>
+        ))
+      }
+    </div>
+
+    <div class="panel mt-5 overflow-hidden">
+      <div class="border-b border-white/[0.07] p-5 sm:p-6">
+        <h3 class="text-lg font-semibold text-bone-50">Pseudocódigo</h3>
+        <p class="mt-1 text-sm text-meteor-400">
+          La misma idea, sin detalles de interfaz.
+        </p>
+      </div>
+      <pre class="overflow-x-auto p-5 font-mono text-xs leading-relaxed text-meteor-200 sm:p-6"><code>ordenar requerimientos por (hosts + 2) de mayor a menor
+si la suma de bloques &gt; tamaño de la red base:
+    error "espacio insuficiente" + prefijo sugerido
+
+puntero = dirección de red base
+para cada requerimiento:
+    k = menor entero tal que 2^k - 2 &gt;= hosts
+    prefijo = 32 - k
+    tamaño = 2^k
+    bloque = [puntero, puntero + tamaño - 1]
+    puntero = puntero + tamaño
+    registrar red, máscara, rango, broadcast y holgura</code></pre>
+    </div>
+  </section>
+
+  <!-- Uso -->
+  <section id="uso" class="container-page mt-16 scroll-mt-24 sm:mt-20">
+    <div class="max-w-2xl">
+      <p class="eyebrow">Manual rápido</p>
+      <h2 class="mt-2 text-3xl font-semibold text-bone-50 sm:text-4xl">
+        Cómo usar las herramientas
+      </h2>
+    </div>
+
+    <div class="mt-8 grid gap-5 lg:grid-cols-2">
+      <div class="panel p-6 sm:p-7">
+        <div class="flex items-center gap-3">
+          <span class="tag tag-blue">CIDR</span>
+          <h3 class="text-lg font-semibold text-bone-50">Analizar una red</h3>
+        </div>
+        <ol class="mt-5 space-y-4">
+          <li class="flex gap-3">
+            <span class="step-number">1</span>
+            <p class="text-sm leading-relaxed text-meteor-300">
+              Escribe la IPv4. Puedes pegar <span class="mono text-xs text-bone-200">10.0.0.0/8</span>
+              y el prefijo se separa solo.
+            </p>
+          </li>
+          <li class="flex gap-3">
+            <span class="step-number">2</span>
+            <p class="text-sm leading-relaxed text-meteor-300">
+              Ajusta el prefijo con el control, los atajos o cambia a
+              <strong class="text-bone-100">máscara decimal</strong>.
+            </p>
+          </li>
+          <li class="flex gap-3">
+            <span class="step-number">3</span>
+            <p class="text-sm leading-relaxed text-meteor-300">
+              Lee red, broadcast, rango, hosts, clase, ámbito y binario. El
+              resultado se actualiza mientras escribes.
+            </p>
+          </li>
+          <li class="flex gap-3">
+            <span class="step-number">4</span>
+            <p class="text-sm leading-relaxed text-meteor-300">
+              En el explorador elige dividir por número de subredes o por hosts
+              por subred. La tabla muestra cada bloque.
+            </p>
+          </li>
+          <li class="flex gap-3">
+            <span class="step-number">5</span>
+            <p class="text-sm leading-relaxed text-meteor-300">
+              Usa <strong class="text-bone-100">Copiar resumen</strong> para
+              llevarte el resultado a otro documento.
+            </p>
+          </li>
+        </ol>
+        <a href="/cidr/" class="btn btn-blue mt-6">Abrir CIDR</a>
+      </div>
+
+      <div class="panel p-6 sm:p-7">
+        <div class="flex items-center gap-3">
+          <span class="tag tag-green">VLSM</span>
+          <h3 class="text-lg font-semibold text-bone-50">Repartir una red</h3>
+        </div>
+        <ol class="mt-5 space-y-4">
+          <li class="flex gap-3">
+            <span class="step-number">1</span>
+            <p class="text-sm leading-relaxed text-meteor-300">
+              Define la red base: dirección y prefijo. Los atajos cargan /24,
+              /16 o /20.
+            </p>
+          </li>
+          <li class="flex gap-3">
+            <span class="step-number">2</span>
+            <p class="text-sm leading-relaxed text-meteor-300">
+              Agrega una fila por subred con su nombre y la cantidad de hosts
+              que necesita.
+            </p>
+          </li>
+          <li class="flex gap-3">
+            <span class="step-number">3</span>
+            <p class="text-sm leading-relaxed text-meteor-300">
+              El orden no importa: el algoritmo ordena de mayor a menor y asigna
+              bloques contiguos.
+            </p>
+          </li>
+          <li class="flex gap-3">
+            <span class="step-number">4</span>
+            <p class="text-sm leading-relaxed text-meteor-300">
+              Revisa el mapa, la tabla, el espacio libre y el paso a paso. Si no
+              cabe, aparece el error con una sugerencia.
+            </p>
+          </li>
+          <li class="flex gap-3">
+            <span class="step-number">5</span>
+            <p class="text-sm leading-relaxed text-meteor-300">
+              Copia el resumen o descarga la tabla en CSV. Los presets
+              <strong class="text-bone-100"> Caso del PDF</strong> y
+              <strong class="text-bone-100"> Campus</strong> sirven para demostrar.
+            </p>
+          </li>
+        </ol>
+        <a href="/vlsm/" class="btn btn-primary mt-6">Abrir VLSM</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Pruebas -->
+  <section id="pruebas" class="container-page mt-16 scroll-mt-24 sm:mt-20">
+    <div class="flex flex-wrap items-end justify-between gap-4">
+      <div class="max-w-2xl">
+        <p class="eyebrow">Validación</p>
+        <h2 class="mt-2 text-3xl font-semibold text-bone-50 sm:text-4xl">
+          Casos de prueba
+        </h2>
+        <p class="mt-3 text-sm leading-relaxed text-meteor-300">
+          Estos casos se verifican con pruebas automáticas y también se pueden
+          reproducir en la interfaz. Los 40 tests de Vitest cubren además
+          máscaras, prefijos límite y errores.
+        </p>
+      </div>
+      <span class="tag tag-green">40 pruebas · 100 % correctas</span>
+    </div>
+
+    <div class="panel mt-8 overflow-hidden">
+      <div class="table-wrap rounded-none border-0">
+        <table class="data-table min-w-[760px]">
+          <thead>
+            <tr>
+              <th>Herramienta</th>
+              <th>Entrada</th>
+              <th>Resultado esperado</th>
+            </tr>
+          </thead>
+          <tbody>
+            {
+              cases.map((item) => (
+                <tr>
+                  <td>
+                    <span class:list={["tag", item.tool === "CIDR" ? "tag-blue" : "tag-green"]}>
+                      {item.tool}
+                    </span>
+                  </td>
+                  <td class="mono text-xs text-bone-100">{item.input}</td>
+                  <td class="text-sm text-meteor-300">{item.expected}</td>
+                </tr>
+              ))
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="mt-4 grid gap-3 sm:grid-cols-3">
+      <div class="panel-flat p-4">
+        <p class="mono text-xs text-ip-blue-soft">pnpm test</p>
+        <p class="mt-1 text-xs text-meteor-400">40 pruebas unitarias con Vitest.</p>
+      </div>
+      <div class="panel-flat p-4">
+        <p class="mono text-xs text-ip-green-soft">pnpm build</p>
+        <p class="mt-1 text-xs text-meteor-400">Genera el sitio estático en dist/.</p>
+      </div>
+      <div class="panel-flat p-4">
+        <p class="mono text-xs text-ip-red-soft">pnpm check</p>
+        <p class="mt-1 text-xs text-meteor-400">Revisa tipos y plantillas Astro.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Errores -->
+  <section id="errores" class="container-page mt-16 scroll-mt-24 sm:mt-20">
+    <div class="max-w-2xl">
+      <p class="eyebrow">Solución de problemas</p>
+      <h2 class="mt-2 text-3xl font-semibold text-bone-50 sm:text-4xl">
+        Errores comunes
+      </h2>
+      <p class="mt-3 text-sm leading-relaxed text-meteor-300">
+        La aplicación valida antes de calcular y explica qué corregir en lugar
+        de mostrar un resultado dudoso.
+      </p>
+    </div>
+
+    <div class="mt-8 grid gap-4 sm:grid-cols-2">
+      {
+        errors.map((error) => (
+          <article class="panel-flat p-5">
+            <div class="flex items-start gap-3">
+              <svg viewBox="0 0 20 20" class="mt-0.5 h-5 w-5 shrink-0 text-ip-red" fill="none" aria-hidden="true">
+                <circle cx="10" cy="10" r="7.5" stroke="currentColor" stroke-width="1.5" />
+                <path d="M10 6v5M10 13.6v.1" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+              </svg>
+              <div>
+                <h3 class="text-base font-semibold text-bone-50">{error.title}</h3>
+                <p class="mt-1.5 text-sm leading-relaxed text-meteor-300">{error.body}</p>
+              </div>
+            </div>
+          </article>
+        ))
+      }
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="container-page mt-16 pb-4 sm:mt-20">
+    <div class="panel relative overflow-hidden p-8 text-center sm:p-10">
+      <div class="pointer-events-none absolute left-1/2 top-0 h-36 w-[26rem] -translate-x-1/2 rounded-full bg-ip-green/10 blur-3xl"></div>
+      <p class="eyebrow">Ahora sí</p>
+      <h2 class="mx-auto mt-3 max-w-xl text-2xl font-semibold text-bone-50 sm:text-3xl">
+        Prueba el caso del PDF y compara con tus cálculos
+      </h2>
+      <p class="mx-auto mt-3 max-w-lg text-sm leading-relaxed text-meteor-300">
+        Carga el preset, cambia los hosts y observa cómo se reorganizan las
+        máscaras sin solaparse.
+      </p>
+      <div class="mt-6 flex flex-wrap justify-center gap-3">
+        <a href="/vlsm/" class="btn btn-primary">Repartir 192.168.0.0/24</a>
+        <a href="/cidr/" class="btn btn-ghost">Analizar una dirección</a>
+      </div>
+    </div>
+  </section>
+</Base>

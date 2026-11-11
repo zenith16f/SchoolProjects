@@ -1,0 +1,863 @@
+---
+import Base from "../layouts/Base.astro";
+import { calculateVlsm } from "../lib/vlsm";
+
+const demo = calculateVlsm("192.168.0.0", 24, [
+  { name: "A", hosts: 100 },
+  { name: "B", hosts: 50 },
+  { name: "C", hosts: 25 },
+  { name: "D", hosts: 10 },
+]);
+---
+
+<Base
+  title="Calculadora VLSM"
+  description="Reparte una red base en subredes de distinto tamaño con VLSM: máscara mínima, rangos, broadcast, desperdicio y espacio libre."
+>
+  <section class="container-page pt-10 sm:pt-14">
+    <div class="flex flex-wrap items-end justify-between gap-5">
+      <div class="max-w-2xl">
+        <p class="eyebrow">Herramienta 02 · VLSM</p>
+        <h1 class="mt-3 text-4xl font-semibold text-bone-50 sm:text-5xl">
+          Calculadora IP <span class="text-ip-green">VLSM</span>
+        </h1>
+        <p class="mt-4 text-sm leading-relaxed text-meteor-300 sm:text-base">
+          Define una red base y los hosts que necesita cada subred. El
+          algoritmo ordena de mayor a menor, calcula la máscara mínima de cada
+          bloque y los asigna sin solapamientos.
+        </p>
+      </div>
+      <a href="/guia/#algoritmo" class="btn btn-ghost btn-sm">
+        Ver el algoritmo
+        <svg viewBox="0 0 16 16" class="h-3.5 w-3.5" fill="none" aria-hidden="true">
+          <path d="M3 8h9M8 4l4 4-4 4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"></path>
+        </svg>
+      </a>
+    </div>
+  </section>
+
+  <section class="container-page mt-8">
+    <div class="grid items-start gap-5 xl:grid-cols-[0.82fr_1.18fr]">
+      <!-- Entrada -->
+      <div class="panel p-5 sm:p-6">
+        <div class="flex items-start justify-between gap-3">
+          <div>
+            <p class="eyebrow">Paso 1</p>
+            <h2 class="mt-1 text-xl font-semibold text-bone-50">Red base</h2>
+          </div>
+          <span id="vlsm-base-preview" class="tag tag-blue">192.168.0.0/24</span>
+        </div>
+
+        <div class="mt-4 grid grid-cols-[1fr_5.5rem] gap-3">
+          <div>
+            <label for="vlsm-base-ip" class="label">Dirección base</label>
+            <input
+              id="vlsm-base-ip"
+              type="text"
+              class="field"
+              value="192.168.0.0"
+              placeholder="192.168.0.0"
+              inputmode="decimal"
+              autocomplete="off"
+              spellcheck="false"
+            />
+          </div>
+          <div>
+            <label for="vlsm-prefix" class="label">Prefijo</label>
+            <div class="relative">
+              <span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 font-mono text-meteor-500">/</span>
+              <input
+                id="vlsm-prefix"
+                type="number"
+                min="0"
+                max="32"
+                step="1"
+                class="field pl-8 text-center"
+                value="24"
+              />
+            </div>
+          </div>
+        </div>
+        <p id="vlsm-base-error" class="error-text" role="alert" hidden></p>
+
+        <div class="mt-3 flex flex-wrap gap-1.5">
+          <button type="button" class="chip chip-button" data-base-cidr="192.168.0.0/24">/24 clásica</button>
+          <button type="button" class="chip chip-button" data-base-cidr="10.0.0.0/16">10.0.0.0/16</button>
+          <button type="button" class="chip chip-button" data-base-cidr="172.16.0.0/20">172.16.0.0/20</button>
+        </div>
+
+        <div class="divider my-5"></div>
+
+        <div class="flex items-center justify-between gap-3">
+          <div>
+            <p class="eyebrow">Paso 2</p>
+            <h2 class="mt-1 text-xl font-semibold text-bone-50">Requerimientos</h2>
+          </div>
+          <button type="button" id="vlsm-add" class="btn btn-ghost btn-sm">
+            <svg viewBox="0 0 16 16" class="h-3.5 w-3.5" fill="none" aria-hidden="true">
+              <path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"></path>
+            </svg>
+            Agregar
+          </button>
+        </div>
+
+        <div id="vlsm-rows" class="mt-4 space-y-3"></div>
+
+        <div class="mt-4 flex flex-wrap gap-2 border-t border-white/[0.06] pt-4">
+          <button type="button" id="vlsm-preset-pdf" class="chip chip-button">Caso del PDF</button>
+          <button type="button" id="vlsm-preset-campus" class="chip chip-button">Campus (5 subredes)</button>
+          <button type="button" id="vlsm-clear" class="chip chip-button text-ip-red-soft hover:border-ip-red/40 hover:bg-ip-red/10">Vaciar</button>
+        </div>
+
+        <p class="mt-4 text-xs leading-relaxed text-meteor-500">
+          El orden de captura no importa: el algoritmo ordena las subredes de
+          mayor a menor antes de asignar. La holgura es la diferencia entre los
+          hosts útiles del bloque y los hosts pedidos.
+        </p>
+      </div>
+
+      <!-- Resultados -->
+      <div class="space-y-5" aria-live="polite">
+        <div id="vlsm-error" class="rounded-2xl border border-ip-red/30 bg-ip-red/10 p-4 text-sm text-ip-red-soft" role="alert" hidden>
+          <div class="flex items-start gap-3">
+            <svg viewBox="0 0 20 20" class="mt-0.5 h-5 w-5 shrink-0" fill="none" aria-hidden="true">
+              <circle cx="10" cy="10" r="7.5" stroke="currentColor" stroke-width="1.5"></circle>
+              <path d="M10 6v5M10 13.6v.1" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path>
+            </svg>
+            <div>
+              <p class="font-semibold">No se pudo calcular</p>
+              <p id="vlsm-error-message" class="mt-1 leading-relaxed"></p>
+            </div>
+          </div>
+        </div>
+
+        <div id="vlsm-empty" class="panel p-8 text-center" hidden>
+          <div class="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.03]">
+            <svg viewBox="0 0 24 24" class="h-6 w-6 text-meteor-300" fill="none" aria-hidden="true">
+              <path d="m12 3 8 4.5-8 4.5-8-4.5L12 3Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"></path>
+              <path d="m4 12 8 4.5 8-4.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path>
+            </svg>
+          </div>
+          <h2 class="mt-4 text-xl font-semibold text-bone-50">Agrega tu primera subred</h2>
+          <p class="mx-auto mt-2 max-w-sm text-sm leading-relaxed text-meteor-400">
+            Escribe un nombre y la cantidad de hosts. También puedes cargar el
+            caso del PDF para ver un ejemplo completo.
+          </p>
+          <button type="button" id="vlsm-empty-preset" class="btn btn-primary mt-5">Cargar caso del PDF</button>
+        </div>
+
+        <div id="vlsm-results" class="space-y-5">
+          <div class="grid gap-4 sm:grid-cols-2 2xl:grid-cols-4">
+            <article class="stat border-t-2 border-t-ip-blue/80">
+              <p class="eyebrow">Subredes</p>
+              <p id="vlsm-stat-count" class="stat-value">4</p>
+              <p class="mt-1 text-xs text-meteor-500">ordenadas por tamaño</p>
+            </article>
+            <article class="stat border-t-2 border-t-bone-200/60">
+              <p class="eyebrow">Asignadas</p>
+              <p id="vlsm-stat-assigned" class="stat-value">240</p>
+              <p id="vlsm-stat-assigned-note" class="mt-1 text-xs text-meteor-500">de 256 direcciones</p>
+            </article>
+            <article class="stat border-t-2 border-t-ip-green/80">
+              <p class="eyebrow">Espacio libre</p>
+              <p id="vlsm-stat-free" class="stat-value">16</p>
+              <p id="vlsm-stat-free-note" class="mt-1 text-xs text-meteor-500">1 bloque libre</p>
+            </article>
+            <article class="stat border-t-2 border-t-ip-red/80">
+              <p class="eyebrow">Aprovechamiento</p>
+              <p id="vlsm-stat-efficiency" class="stat-value">90.6 %</p>
+              <p class="mt-1 text-xs text-meteor-500">hosts útiles / red base</p>
+            </article>
+          </div>
+
+          <div class="panel p-5 sm:p-6">
+            <div class="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <p class="eyebrow">Mapa de direcciones</p>
+                <h3 class="mt-1 text-lg font-semibold text-bone-50">Asignación dentro de la red base</h3>
+              </div>
+              <span id="vlsm-base-chip" class="tag tag-blue">{demo.baseCidr}</span>
+            </div>
+            <div id="vlsm-map" class="vlsm-map mt-4" role="img" aria-label="Mapa de asignación de subredes"></div>
+            <div id="vlsm-legend" class="mt-3 flex flex-wrap gap-x-4 gap-y-2 text-xs text-meteor-300"></div>
+
+            <div class="mt-5 grid grid-cols-3 gap-2 rounded-xl border border-white/10 bg-meteor-950/40 p-3 text-center">
+              <div>
+                <p class="text-[10px] uppercase tracking-wider text-meteor-500">Hosts útiles</p>
+                <p id="vlsm-usable" class="mono mt-1 text-sm font-semibold text-ip-green-soft">232</p>
+              </div>
+              <div class="border-x border-white/10">
+                <p class="text-[10px] uppercase tracking-wider text-meteor-500">Red + broadcast</p>
+                <p id="vlsm-reserved" class="mono mt-1 text-sm font-semibold text-ip-red-soft">8</p>
+              </div>
+              <div>
+                <p class="text-[10px] uppercase tracking-wider text-meteor-500">Holgura</p>
+                <p id="vlsm-slack" class="mono mt-1 text-sm font-semibold text-bone-100">47</p>
+              </div>
+            </div>
+            <p class="mt-3 text-xs leading-relaxed text-meteor-500">
+              Holgura = hosts útiles del bloque − hosts pedidos. No incluye las
+              direcciones de red y broadcast.
+            </p>
+          </div>
+
+          <div class="panel overflow-hidden">
+            <div class="flex flex-wrap items-center justify-between gap-3 border-b border-white/[0.07] p-5 sm:p-6">
+              <div>
+                <p class="eyebrow">Resultado</p>
+                <h3 class="mt-1 text-lg font-semibold text-bone-50">Subredes asignadas</h3>
+              </div>
+              <div class="flex flex-wrap gap-2">
+                <button type="button" id="vlsm-copy" class="btn btn-ghost btn-sm">Copiar resumen</button>
+                <button type="button" id="vlsm-csv" class="btn btn-ghost btn-sm">
+                  <svg viewBox="0 0 16 16" class="h-3.5 w-3.5" fill="none" aria-hidden="true">
+                    <path d="M8 2v8M5 7l3 3 3-3M3 13h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path>
+                  </svg>
+                  CSV
+                </button>
+              </div>
+            </div>
+
+            <div class="table-wrap max-h-[30rem] rounded-none border-0">
+              <table class="data-table min-w-[980px]">
+                <thead>
+                  <tr>
+                    <th class="w-10">#</th>
+                    <th>Subred</th>
+                    <th>Red</th>
+                    <th>Máscara</th>
+                    <th>Rango de hosts</th>
+                    <th>Broadcast</th>
+                    <th class="text-right">Útiles</th>
+                    <th class="text-right">Holgura</th>
+                  </tr>
+                </thead>
+                <tbody id="vlsm-table-body"></tbody>
+              </table>
+            </div>
+            <p class="border-t border-white/[0.06] p-4 text-xs leading-relaxed text-meteor-500">
+              «Holgura» es la diferencia entre hosts útiles y hosts pedidos.
+              Cada subred reserva además 2 direcciones para red y broadcast.
+            </p>
+          </div>
+
+          <div class="panel p-5 sm:p-6">
+            <div class="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <p class="eyebrow">Espacio restante</p>
+                <h3 class="mt-1 text-lg font-semibold text-bone-50">Bloques libres</h3>
+              </div>
+              <span id="vlsm-free-chip" class="tag tag-neutral">16 direcciones</span>
+            </div>
+            <div id="vlsm-free-list" class="mt-4 flex flex-wrap gap-2"></div>
+            <p class="mt-3 text-xs leading-relaxed text-meteor-500">
+              El espacio libre se descompone en bloques CIDR alineados, listos
+              para una futura subred.
+            </p>
+          </div>
+
+          <details class="panel p-5 sm:p-6">
+            <summary class="flex items-center justify-between gap-3">
+              <div>
+                <p class="eyebrow">Paso a paso</p>
+                <h3 class="mt-1 text-lg font-semibold text-bone-50">Cómo se calculó</h3>
+              </div>
+              <span class="text-xs text-meteor-400">Abrir detalle</span>
+            </summary>
+            <ol id="vlsm-steps" class="mt-5 space-y-4"></ol>
+          </details>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+</Base>
+
+<script>
+  import {
+    IpError,
+    formatIPv4,
+    networkAddress,
+    parseCidr,
+    parseIPv4,
+    parsePrefix,
+  } from "../lib/ip";
+  import { calculateVlsm, type VlsmResult } from "../lib/vlsm";
+
+  interface Row {
+    id: string;
+    name: string;
+    hosts: string;
+  }
+
+  const PDF_ROWS: Array<Omit<Row, "id">> = [
+    { name: "A", hosts: "100" },
+    { name: "B", hosts: "50" },
+    { name: "C", hosts: "25" },
+    { name: "D", hosts: "10" },
+  ];
+
+  const CAMPUS_ROWS: Array<Omit<Row, "id">> = [
+    { name: "Ventas", hosts: "500" },
+    { name: "TI", hosts: "200" },
+    { name: "Recursos Humanos", hosts: "100" },
+    { name: "Almacén", hosts: "50" },
+    { name: "Dirección", hosts: "20" },
+  ];
+
+  const SEGMENT_CLASSES = [
+    "bg-ip-blue",
+    "bg-ip-green",
+    "bg-ip-red",
+    "bg-ip-blue-soft",
+    "bg-ip-green-soft",
+    "bg-ip-red-soft",
+  ];
+
+  function el<T extends Element>(selector: string): T {
+    const node = document.querySelector<T>(selector);
+    if (!node) throw new Error(`No se encontró el elemento ${selector}`);
+    return node;
+  }
+
+  function messageOf(error: unknown): string {
+    if (error instanceof IpError) return error.message;
+    console.error(error);
+    return "Revisa los datos e inténtalo de nuevo.";
+  }
+
+  function escapeHtml(value: string): string {
+    return value.replace(/[&<>"']/g, (character) => {
+      const map: Record<string, string> = {
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#39;",
+      };
+      return map[character] ?? character;
+    });
+  }
+
+  const baseIpInput = el<HTMLInputElement>("#vlsm-base-ip");
+  const basePrefixInput = el<HTMLInputElement>("#vlsm-prefix");
+  const basePreview = el<HTMLSpanElement>("#vlsm-base-preview");
+  const baseError = el<HTMLParagraphElement>("#vlsm-base-error");
+  const rowsContainer = el<HTMLDivElement>("#vlsm-rows");
+  const addButton = el<HTMLButtonElement>("#vlsm-add");
+  const clearButton = el<HTMLButtonElement>("#vlsm-clear");
+  const presetPdf = el<HTMLButtonElement>("#vlsm-preset-pdf");
+  const presetCampus = el<HTMLButtonElement>("#vlsm-preset-campus");
+  const emptyPreset = el<HTMLButtonElement>("#vlsm-empty-preset");
+  const errorBanner = el<HTMLDivElement>("#vlsm-error");
+  const errorMessage = el<HTMLParagraphElement>("#vlsm-error-message");
+  const emptyState = el<HTMLDivElement>("#vlsm-empty");
+  const results = el<HTMLDivElement>("#vlsm-results");
+  const statCount = el<HTMLParagraphElement>("#vlsm-stat-count");
+  const statAssigned = el<HTMLParagraphElement>("#vlsm-stat-assigned");
+  const statAssignedNote = el<HTMLParagraphElement>("#vlsm-stat-assigned-note");
+  const statFree = el<HTMLParagraphElement>("#vlsm-stat-free");
+  const statFreeNote = el<HTMLParagraphElement>("#vlsm-stat-free-note");
+  const statEfficiency = el<HTMLParagraphElement>("#vlsm-stat-efficiency");
+  const baseChip = el<HTMLSpanElement>("#vlsm-base-chip");
+  const map = el<HTMLDivElement>("#vlsm-map");
+  const legend = el<HTMLDivElement>("#vlsm-legend");
+  const usableValue = el<HTMLParagraphElement>("#vlsm-usable");
+  const reservedValue = el<HTMLParagraphElement>("#vlsm-reserved");
+  const slackValue = el<HTMLParagraphElement>("#vlsm-slack");
+  const tableBody = el<HTMLTableSectionElement>("#vlsm-table-body");
+  const freeChip = el<HTMLSpanElement>("#vlsm-free-chip");
+  const freeList = el<HTMLDivElement>("#vlsm-free-list");
+  const stepsList = el<HTMLOListElement>("#vlsm-steps");
+  const copyButton = el<HTMLButtonElement>("#vlsm-copy");
+  const csvButton = el<HTMLButtonElement>("#vlsm-csv");
+  const toast = el<HTMLDivElement>("#toast");
+
+  let rows: Row[] = [];
+  let nextId = 1;
+  let lastResult: VlsmResult | null = null;
+  let toastTimer: number | undefined;
+
+  function makeRows(source: Array<Omit<Row, "id">>): Row[] {
+    return source.map((row) => ({ ...row, id: `r${nextId++}` }));
+  }
+
+  function setBaseError(message: string | null, input?: HTMLInputElement): void {
+    baseError.hidden = message === null;
+    baseError.textContent = message ?? "";
+    [baseIpInput, basePrefixInput].forEach((field) => {
+      field.classList.remove("field-invalid");
+      field.setAttribute("aria-invalid", "false");
+    });
+    if (message !== null && input) {
+      input.classList.add("field-invalid");
+      input.setAttribute("aria-invalid", "true");
+    }
+  }
+
+  function setView(state: "results" | "error" | "empty" | "none"): void {
+    results.hidden = state !== "results";
+    errorBanner.hidden = state !== "error";
+    emptyState.hidden = state !== "empty";
+  }
+
+  function showError(message: string): void {
+    errorMessage.textContent = message;
+    setView("error");
+    lastResult = null;
+  }
+
+  function renderRows(focusId?: string): void {
+    rowsContainer.innerHTML = "";
+
+    rows.forEach((row, index) => {
+      const rowElement = document.createElement("div");
+      rowElement.className =
+        "grid gap-3 sm:grid-cols-[1fr_6.5rem_2.5rem] sm:items-end";
+      rowElement.dataset.rowId = row.id;
+      rowElement.innerHTML = `
+        <div>
+          <label class="label" for="name-${row.id}">Subred ${index + 1}</label>
+          <input
+            id="name-${row.id}"
+            data-role="name"
+            type="text"
+            class="field field-sm"
+            placeholder="Departamento"
+            autocomplete="off"
+            spellcheck="false"
+          />
+        </div>
+        <div>
+          <label class="label" for="hosts-${row.id}">Hosts</label>
+          <input
+            id="hosts-${row.id}"
+            data-role="hosts"
+            type="number"
+            min="1"
+            step="1"
+            class="field field-sm"
+            inputmode="numeric"
+            placeholder="50"
+          />
+        </div>
+        <button
+          type="button"
+          data-role="remove"
+          class="btn btn-danger h-[38px] w-[38px] p-0"
+          aria-label="Eliminar esta subred"
+        >
+          <svg viewBox="0 0 16 16" class="h-4 w-4" fill="none" aria-hidden="true">
+            <path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"></path>
+          </svg>
+        </button>
+      `;
+
+      const nameInput = rowElement.querySelector<HTMLInputElement>(
+        '[data-role="name"]',
+      );
+      const hostsInput = rowElement.querySelector<HTMLInputElement>(
+        '[data-role="hosts"]',
+      );
+      if (nameInput) nameInput.value = row.name;
+      if (hostsInput) hostsInput.value = row.hosts;
+
+      rowsContainer.appendChild(rowElement);
+
+      if (focusId === row.id) {
+        nameInput?.focus();
+        nameInput?.select();
+      }
+    });
+  }
+
+  function addRow(name?: string, hosts = "10"): void {
+    const row: Row = {
+      id: `r${nextId++}`,
+      name: name ?? `Subred ${rows.length + 1}`,
+      hosts,
+    };
+    rows.push(row);
+    renderRows(row.id);
+    recalculate();
+  }
+
+  function loadPreset(
+    source: Array<Omit<Row, "id">>,
+    baseCidr?: string,
+  ): void {
+    if (baseCidr) {
+      try {
+        const parsed = parseCidr(baseCidr);
+        baseIpInput.value = formatIPv4(parsed.address);
+        basePrefixInput.value = String(parsed.prefix);
+      } catch (error) {
+        setBaseError(messageOf(error));
+      }
+    }
+    rows = makeRows(source);
+    renderRows();
+    recalculate();
+  }
+
+  function renderMap(result: VlsmResult): void {
+    map.innerHTML = "";
+
+    result.subnets.forEach((subnet, index) => {
+      const segment = document.createElement("span");
+      segment.className = `vlsm-segment ${SEGMENT_CLASSES[index % SEGMENT_CLASSES.length]}`;
+      segment.style.flexGrow = String(subnet.blockSize);
+      segment.title = `${subnet.name}: ${subnet.cidr} · ${subnet.blockSize} direcciones`;
+      map.appendChild(segment);
+    });
+
+    if (result.freeAddresses > 0) {
+      const free = document.createElement("span");
+      free.className = "vlsm-segment bg-meteor-700/50";
+      free.style.flexGrow = String(result.freeAddresses);
+      free.title = `Libre: ${result.freeAddresses} direcciones`;
+      map.appendChild(free);
+    }
+
+    map.setAttribute(
+      "aria-label",
+      `Mapa de ${result.subnets.length} subredes y ${result.freeAddresses} direcciones libres dentro de ${result.baseCidr}`,
+    );
+
+    legend.innerHTML =
+      result.subnets
+        .map(
+          (subnet, index) => `
+          <span class="inline-flex items-center gap-1.5">
+            <span class="dot ${SEGMENT_CLASSES[index % SEGMENT_CLASSES.length]}"></span>
+            <span class="font-medium text-bone-200">${escapeHtml(subnet.name)}</span>
+            <span class="mono text-meteor-500">${subnet.cidr}</span>
+          </span>`,
+        )
+        .join("") +
+      (result.freeAddresses > 0
+        ? `<span class="inline-flex items-center gap-1.5">
+            <span class="dot bg-meteor-600"></span>
+            <span class="text-meteor-400">Libre</span>
+            <span class="mono text-meteor-500">${result.freeAddresses} dirs</span>
+          </span>`
+        : "");
+  }
+
+  function renderTable(result: VlsmResult): void {
+    tableBody.innerHTML = result.subnets
+      .map(
+        (subnet, index) => `
+        <tr>
+          <td class="mono text-meteor-500">${index + 1}</td>
+          <td>
+            <span class="inline-flex items-center gap-2 font-medium text-bone-100">
+              <span class="dot ${SEGMENT_CLASSES[index % SEGMENT_CLASSES.length]}"></span>
+              ${escapeHtml(subnet.name)}
+            </span>
+            <span class="mt-0.5 block text-[10px] text-meteor-500">
+              ${subnet.requestedHosts} hosts pedidos
+            </span>
+          </td>
+          <td class="mono whitespace-nowrap text-bone-100">${subnet.cidr}</td>
+          <td class="whitespace-nowrap">
+            <span class="mono block text-meteor-200">${subnet.maskText}</span>
+            <span class="mono text-[10px] text-ip-blue-soft">/${subnet.prefix}</span>
+          </td>
+          <td class="mono whitespace-nowrap text-meteor-200">
+            ${subnet.firstHostText ?? "—"} – ${subnet.lastHostText ?? "—"}
+          </td>
+          <td class="mono whitespace-nowrap text-ip-red-soft">${subnet.broadcastText}</td>
+          <td class="mono text-right text-bone-100">${subnet.usableHosts}</td>
+          <td class="mono text-right text-meteor-300">${subnet.waste}</td>
+        </tr>`,
+      )
+      .join("");
+  }
+
+  function renderFreeBlocks(result: VlsmResult): void {
+    freeChip.textContent = `${result.freeAddresses.toLocaleString("es-MX")} ${result.freeAddresses === 1 ? "dirección" : "direcciones"}`;
+
+    if (result.freeBlocks.length === 0) {
+      freeList.innerHTML = `<p class="text-sm text-meteor-400">No queda espacio libre: la red base quedó completamente asignada.</p>`;
+      return;
+    }
+
+    freeList.innerHTML = result.freeBlocks
+      .map(
+        (block) => `
+        <span class="chip">
+          <span class="dot bg-meteor-500"></span>
+          <span class="mono">${block.cidr}</span>
+          <span class="text-meteor-500">${block.size.toLocaleString("es-MX")} dirs</span>
+        </span>`,
+      )
+      .join("");
+  }
+
+  function renderSteps(result: VlsmResult): void {
+    stepsList.innerHTML = result.steps
+      .map(
+        (step) => `
+        <li class="flex gap-3">
+          <span class="step-number">${step.order}</span>
+          <div class="min-w-0">
+            <p class="text-sm text-bone-100">
+              <strong class="font-semibold">${escapeHtml(step.name)}</strong>
+              — ${step.requestedHosts} hosts
+            </p>
+            <p class="mt-1 text-xs leading-relaxed text-meteor-400">
+              +2 (red y broadcast) = ${step.neededAddresses} direcciones
+              → máscara /${step.prefix}
+              → bloque de ${step.blockSize} direcciones
+              → <span class="mono text-ip-blue-soft">${step.cidr}</span>
+            </p>
+          </div>
+        </li>`,
+      )
+      .join("");
+  }
+
+  function renderResults(result: VlsmResult): void {
+    statCount.textContent = String(result.subnets.length);
+    statAssigned.textContent = result.assignedAddresses.toLocaleString("es-MX");
+    statAssignedNote.textContent = `de ${result.baseSize.toLocaleString("es-MX")} direcciones`;
+    statFree.textContent = result.freeAddresses.toLocaleString("es-MX");
+    statFreeNote.textContent =
+      result.freeAddresses === 0
+        ? "sin espacio libre"
+        : `${result.freeBlocks.length} ${result.freeBlocks.length === 1 ? "bloque libre" : "bloques libres"}`;
+    statEfficiency.textContent = `${result.efficiency.toFixed(1)} %`;
+    baseChip.textContent = result.baseCidr;
+    usableValue.textContent = result.usableAddresses.toLocaleString("es-MX");
+    reservedValue.textContent = result.reservedAddresses.toLocaleString("es-MX");
+    slackValue.textContent = result.slackAddresses.toLocaleString("es-MX");
+
+    renderMap(result);
+    renderTable(result);
+    renderFreeBlocks(result);
+    renderSteps(result);
+
+    lastResult = result;
+    setView("results");
+  }
+
+  function recalculate(): void {
+    const baseIpText = baseIpInput.value.trim();
+    const basePrefixText = basePrefixInput.value.trim();
+
+    let ip: number;
+    try {
+      ip = parseIPv4(baseIpText);
+    } catch (error) {
+      setBaseError(messageOf(error), baseIpInput);
+      basePreview.textContent = "—";
+      setView("none");
+      lastResult = null;
+      return;
+    }
+
+    let basePrefix: number;
+    try {
+      basePrefix = parsePrefix(basePrefixText);
+    } catch (error) {
+      setBaseError(messageOf(error), basePrefixInput);
+      basePreview.textContent = "—";
+      setView("none");
+      lastResult = null;
+      return;
+    }
+
+    setBaseError(null);
+    const network = networkAddress(ip, basePrefix);
+    basePreview.textContent = `${formatIPv4(network)}/${basePrefix}`;
+
+    if (rows.length === 0) {
+      setView("empty");
+      lastResult = null;
+      return;
+    }
+
+    try {
+      const result = calculateVlsm(
+        baseIpText,
+        basePrefix,
+        rows.map((row) => ({ name: row.name, hosts: Number(row.hosts) })),
+      );
+      renderResults(result);
+    } catch (error) {
+      showError(messageOf(error));
+    }
+  }
+
+  async function copyText(text: string): Promise<void> {
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch {
+      const area = document.createElement("textarea");
+      area.value = text;
+      area.style.position = "fixed";
+      area.style.opacity = "0";
+      document.body.appendChild(area);
+      area.select();
+      document.execCommand("copy");
+      area.remove();
+    }
+    showToast("Resumen copiado al portapapeles");
+  }
+
+  function showToast(message: string): void {
+    toast.textContent = message;
+    toast.hidden = false;
+    window.clearTimeout(toastTimer);
+    toastTimer = window.setTimeout(() => {
+      toast.hidden = true;
+    }, 2400);
+  }
+
+  function summaryText(result: VlsmResult): string {
+    const lines = [
+      "Calculadora IP — VLSM",
+      `Red base: ${result.baseCidr} (${result.baseSize} direcciones)`,
+      "Subredes (ordenadas de mayor a menor):",
+      ...result.subnets.map(
+        (subnet, index) =>
+          `${index + 1}. ${subnet.name} — ${subnet.requestedHosts} hosts → ${subnet.cidr} (${subnet.maskText}) · rango ${subnet.firstHostText ?? "—"}–${subnet.lastHostText ?? "—"} · broadcast ${subnet.broadcastText} · ${subnet.usableHosts} útiles · holgura ${subnet.waste}`,
+      ),
+      `Espacio libre: ${result.freeAddresses} direcciones${
+        result.freeBlocks.length > 0
+          ? ` → ${result.freeBlocks.map((block) => block.cidr).join(", ")}`
+          : ""
+      }`,
+      `Resumen: ${result.assignedAddresses} asignadas · ${result.usableAddresses} útiles · ${result.reservedAddresses} red/broadcast · ${result.slackAddresses} holgura · ${result.efficiency.toFixed(1)} % aprovechamiento`,
+    ];
+    return lines.join("\n");
+  }
+
+  function csvCell(value: string | number): string {
+    return `"${String(value).replace(/"/g, '""')}"`;
+  }
+
+  function downloadCsv(result: VlsmResult): void {
+    const header = [
+      "#",
+      "Subred",
+      "Hosts pedidos",
+      "Red",
+      "Prefijo",
+      "Máscara",
+      "Primer host",
+      "Último host",
+      "Broadcast",
+      "Hosts útiles",
+      "Holgura",
+    ];
+    const data = result.subnets.map((subnet, index) => [
+      index + 1,
+      subnet.name,
+      subnet.requestedHosts,
+      subnet.networkText,
+      subnet.prefix,
+      subnet.maskText,
+      subnet.firstHostText ?? "",
+      subnet.lastHostText ?? "",
+      subnet.broadcastText,
+      subnet.usableHosts,
+      subnet.waste,
+    ]);
+    const csv =
+      "\uFEFF" +
+      [header, ...data]
+        .map((row) => row.map((cell) => csvCell(cell)).join(","))
+        .join("\r\n");
+
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `vlsm-${result.baseCidr.replace(/[./]/g, "-")}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+    showToast("CSV descargado");
+  }
+
+  addButton.addEventListener("click", () => addRow());
+
+  clearButton.addEventListener("click", () => {
+    rows = [];
+    renderRows();
+    recalculate();
+    addButton.focus();
+  });
+
+  presetPdf.addEventListener("click", () =>
+    loadPreset(PDF_ROWS, "192.168.0.0/24"),
+  );
+  presetCampus.addEventListener("click", () =>
+    loadPreset(CAMPUS_ROWS, "10.0.0.0/16"),
+  );
+  emptyPreset.addEventListener("click", () =>
+    loadPreset(PDF_ROWS, "192.168.0.0/24"),
+  );
+
+  rowsContainer.addEventListener("input", (event) => {
+    const target = event.target;
+    if (!(target instanceof HTMLInputElement)) return;
+    const rowElement = target.closest<HTMLElement>("[data-row-id]");
+    if (!rowElement) return;
+    const row = rows.find((item) => item.id === rowElement.dataset.rowId);
+    if (!row) return;
+    if (target.dataset.role === "name") row.name = target.value;
+    if (target.dataset.role === "hosts") row.hosts = target.value;
+    recalculate();
+  });
+
+  rowsContainer.addEventListener("click", (event) => {
+    const target = event.target;
+    if (!(target instanceof Element)) return;
+    const button = target.closest<HTMLButtonElement>('[data-role="remove"]');
+    if (!button) return;
+    const rowElement = button.closest<HTMLElement>("[data-row-id]");
+    if (!rowElement) return;
+    rows = rows.filter((row) => row.id !== rowElement.dataset.rowId);
+    renderRows();
+    recalculate();
+  });
+
+  document
+    .querySelectorAll<HTMLButtonElement>("[data-base-cidr]")
+    .forEach((button) => {
+      button.addEventListener("click", () => {
+        try {
+          const parsed = parseCidr(button.dataset.baseCidr ?? "");
+          baseIpInput.value = formatIPv4(parsed.address);
+          basePrefixInput.value = String(parsed.prefix);
+          recalculate();
+        } catch (error) {
+          setBaseError(messageOf(error));
+        }
+      });
+    });
+
+  baseIpInput.addEventListener("input", recalculate);
+  basePrefixInput.addEventListener("input", recalculate);
+
+  copyButton.addEventListener("click", () => {
+    if (lastResult) void copyText(summaryText(lastResult));
+  });
+
+  csvButton.addEventListener("click", () => {
+    if (lastResult) downloadCsv(lastResult);
+  });
+
+  const requestedPreset = new URLSearchParams(window.location.search).get(
+    "ejemplo",
+  );
+  loadPreset(
+    requestedPreset === "campus" ? CAMPUS_ROWS : PDF_ROWS,
+    requestedPreset === "campus" ? "10.0.0.0/16" : "192.168.0.0/24",
+  );
+</script>

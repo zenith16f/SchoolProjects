@@ -1,0 +1,70 @@
+---
+interface Props {
+  path: string;
+}
+
+const { path } = Astro.props;
+
+const links = [
+  { href: "/", label: "Inicio" },
+  { href: "/cidr/", label: "CIDR" },
+  { href: "/vlsm/", label: "VLSM" },
+  { href: "/guia/", label: "Guía" },
+];
+
+const isActive = (href: string) =>
+  href === "/" ? path === "/" : path.startsWith(href);
+---
+
+<header class="sticky top-0 z-40 border-b border-white/[0.06] bg-meteor-950/80 backdrop-blur-xl">
+  <div class="container-page flex h-16 items-center justify-between gap-3">
+    <a href="/" class="group flex shrink-0 items-center gap-3" aria-label="Calculadora IP, inicio">
+      <svg
+        viewBox="0 0 32 32"
+        class="h-9 w-9 shrink-0 transition-transform duration-300 group-hover:rotate-6"
+        aria-hidden="true"
+      >
+        <rect x="1" y="1" width="30" height="30" rx="9" fill="#232930" stroke="rgba(244,240,228,0.14)"></rect>
+        <path d="M9 11h14M9 21h14M11 9v14M21 9v14" stroke="rgba(244,240,228,0.14)" stroke-width="1"></path>
+        <circle cx="9" cy="11" r="2.7" fill="#6c9fe8"></circle>
+        <circle cx="23" cy="11" r="2.7" fill="#6cc28c"></circle>
+        <circle cx="9" cy="21" r="2.7" fill="#e57a70"></circle>
+        <circle cx="23" cy="21" r="2.7" fill="#f4f0e4"></circle>
+      </svg>
+      <span class="hidden sm:block">
+        <span class="block font-display text-sm font-semibold leading-tight text-bone-50">
+          Calculadora IP
+        </span>
+        <span class="block text-[10px] uppercase tracking-[0.2em] text-meteor-400">
+          CIDR · VLSM
+        </span>
+      </span>
+    </a>
+
+    <nav aria-label="Navegación principal" class="flex items-center gap-1">
+      {
+        links.map((link) => (
+          <a
+            href={link.href}
+            aria-current={isActive(link.href) ? "page" : undefined}
+            class:list={[
+              "rounded-lg px-3 py-2 text-sm font-medium transition",
+              isActive(link.href)
+                ? "bg-white/[0.06] text-bone-50"
+                : "text-meteor-300 hover:bg-white/[0.04] hover:text-bone-100",
+            ]}
+          >
+            {link.label}
+          </a>
+        ))
+      }
+    </nav>
+
+    <a href="/vlsm/" class="btn btn-primary btn-sm hidden shrink-0 lg:inline-flex">
+      Probar VLSM
+      <svg viewBox="0 0 16 16" class="h-3.5 w-3.5" fill="none" aria-hidden="true">
+        <path d="M3 8h9M8 4l4 4-4 4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"></path>
+      </svg>
+    </a>
+  </div>
+</header>
