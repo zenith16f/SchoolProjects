@@ -1,0 +1,18 @@
+# Dependencias y carpetas generadas: se recrean con los comandos del README
+# (pnpm install · pnpm build · pnpm doc · pnpm empaquetar).
+node_modules/
+dist/
+.astro/
+entrega/
+coverage/
+*.log
+.DS_Store
+
+# Artefactos regenerables de docs/ (se recrean con `pnpm doc`,
+# `pnpm resultados` y `node scripts/qa.mjs`). Los .md escritos a mano
+# sí forman parte del código fuente.
+docs/documento.html
+docs/resultados.json
+docs/resultados-vlsm.csv
+docs/capturas/
+docs/*.pdf

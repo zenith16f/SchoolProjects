@@ -1,0 +1,807 @@
+---
+import Base from "../layouts/Base.astro";
+import { analyzeCidr } from "../lib/ip";
+
+const example = analyzeCidr("192.168.10.0/24");
+
+const examples = [
+  { label: "192.168.10.0/24", ip: "192.168.10.0", prefix: 24 },
+  { label: "10.0.0.0/8", ip: "10.0.0.0", prefix: 8 },
+  { label: "172.16.5.130/26", ip: "172.16.5.130", prefix: 26 },
+  { label: "203.0.113.0/30", ip: "203.0.113.0", prefix: 30 },
+];
+---
+
+<Base
+  title="Calculadora CIDR"
+  description="Calcula red, broadcast, rango de hosts, máscara, wildcard y binario de cualquier dirección IPv4 con prefijo CIDR."
+>
+  <section class="container-page pt-10 sm:pt-14">
+    <div class="flex flex-wrap items-end justify-between gap-5">
+      <div class="max-w-2xl">
+        <p class="eyebrow">Herramienta 01 · CIDR</p>
+        <h1 class="mt-3 text-4xl font-semibold text-bone-50 sm:text-5xl">
+          Calculadora IP <span class="text-ip-blue">CIDR</span>
+        </h1>
+        <p class="mt-4 text-sm leading-relaxed text-meteor-300 sm:text-base">
+          Escribe una dirección con su prefijo (o su máscara decimal) y obtén
+          todos los datos de la subred. Después puedes dividirla en bloques
+          iguales por número de subredes o por hosts requeridos.
+        </p>
+      </div>
+      <a href="/guia/#cidr" class="btn btn-ghost btn-sm">
+        ¿Cómo se calcula?
+        <svg viewBox="0 0 16 16" class="h-3.5 w-3.5" fill="none" aria-hidden="true">
+          <path d="M3 8h9M8 4l4 4-4 4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"></path>
+        </svg>
+      </a>
+    </div>
+  </section>
+
+  <!-- Entrada -->
+  <section class="container-page mt-8">
+    <form class="panel p-5 sm:p-7" id="cidr-form" novalidate>
+      <div class="grid gap-5 lg:grid-cols-[1.2fr_0.8fr]">
+        <div>
+          <label for="cidr-ip" class="label">Dirección IPv4</label>
+          <input
+            id="cidr-ip"
+            name="ip"
+            type="text"
+            class="field text-lg"
+            value={example.ipText}
+            placeholder="192.168.10.0"
+            inputmode="decimal"
+            autocomplete="off"
+            spellcheck="false"
+            aria-describedby="cidr-ip-help cidr-ip-error"
+          />
+          <p id="cidr-ip-help" class="mt-2 text-xs text-meteor-500">
+            También puedes pegar la notación completa:
+            <span class="mono text-meteor-300">10.0.0.0/8</span>. El prefijo se
+            separa automáticamente.
+          </p>
+          <p id="cidr-ip-error" class="error-text" role="alert" hidden></p>
+        </div>
+
+        <div>
+          <div class="flex items-center justify-between gap-3">
+            <span class="label mb-0">Máscara de red</span>
+            <div class="mode-switch" role="group" aria-label="Forma de la máscara">
+              <button type="button" data-mode="prefix" aria-pressed="true">/prefijo</button>
+              <button type="button" data-mode="mask" aria-pressed="false">decimal</button>
+            </div>
+          </div>
+
+          <div id="prefix-panel" class="mt-2">
+            <div class="flex items-center gap-3">
+              <div class="relative w-24 shrink-0">
+                <span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 font-mono text-meteor-500">/</span>
+                <input
+                  id="cidr-prefix"
+                  name="prefix"
+                  type="number"
+                  min="0"
+                  max="32"
+                  step="1"
+                  value={example.prefix}
+                  class="field pl-8 text-center"
+                  aria-label="Prefijo CIDR"
+                />
+              </div>
+              <input
+                id="cidr-prefix-range"
+                type="range"
+                min="0"
+                max="32"
+                step="1"
+                value={example.prefix}
+                class="range flex-1"
+                aria-label="Prefijo CIDR (control deslizante)"
+              />
+            </div>
+            <div class="mt-3 flex flex-wrap gap-1.5">
+              {[8, 16, 24, 26, 30].map((value) => (
+                <button
+                  type="button"
+                  class="chip chip-button px-2.5 py-0.5"
+                  data-prefix-shortcut={value}
+                >
+                  /{value}
+                </button>
+              ))}
+            </div>
+            <p id="cidr-prefix-error" class="error-text" role="alert" hidden></p>
+          </div>
+
+          <div id="mask-panel" class="mt-2" hidden>
+            <input
+              id="cidr-mask"
+              name="mask"
+              type="text"
+              class="field"
+              value={example.maskText}
+              placeholder="255.255.255.0"
+              inputmode="decimal"
+              autocomplete="off"
+              spellcheck="false"
+              aria-label="Máscara de red decimal"
+            />
+            <p class="mt-2 text-xs text-meteor-500">
+              La máscara debe ser contigua (por ejemplo, 255.255.254.0).
+            </p>
+            <p id="cidr-mask-error" class="error-text" role="alert" hidden></p>
+          </div>
+        </div>
+      </div>
+
+      <div class="mt-5 flex flex-wrap items-center gap-2 border-t border-white/[0.06] pt-4">
+        <span class="text-xs text-meteor-500">Ejemplos:</span>
+        {
+          examples.map((item) => (
+            <button
+              type="button"
+              class="chip chip-button"
+              data-example-ip={item.ip}
+              data-example-prefix={item.prefix}
+            >
+              {item.label}
+            </button>
+          ))
+        }
+      </div>
+    </form>
+  </section>
+
+  <!-- Resultados -->
+  <section class="container-page mt-8" aria-live="polite">
+    <div class="mb-4 flex flex-wrap items-end justify-between gap-3">
+      <div>
+        <p class="eyebrow">Resultados</p>
+        <h2 class="mt-1 text-2xl font-semibold text-bone-50">Datos de la subred</h2>
+      </div>
+      <button type="button" id="cidr-copy" class="btn btn-ghost btn-sm">
+        <svg viewBox="0 0 16 16" class="h-3.5 w-3.5" fill="none" aria-hidden="true">
+          <rect x="5" y="5" width="8" height="9" rx="1.5" stroke="currentColor" stroke-width="1.4"></rect>
+          <path d="M11 5V3.5A1.5 1.5 0 0 0 9.5 2H3.5A1.5 1.5 0 0 0 2 3.5v7A1.5 1.5 0 0 0 3.5 12H5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"></path>
+        </svg>
+        Copiar resumen
+      </button>
+    </div>
+
+    <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <article class="stat border-t-2 border-t-ip-blue/80">
+        <p class="eyebrow">Dirección de red</p>
+        <p class="stat-value" data-field="network">—</p>
+        <p class="mt-1 font-mono text-xs text-ip-blue-soft" data-field="cidr">—</p>
+      </article>
+      <article class="stat border-t-2 border-t-ip-red/80">
+        <p class="eyebrow">Broadcast</p>
+        <p class="stat-value" data-field="broadcast">—</p>
+        <p class="mt-1 text-xs text-meteor-500">Última dirección del bloque</p>
+      </article>
+      <article class="stat border-t-2 border-t-ip-green/80">
+        <p class="eyebrow">Rango de hosts</p>
+        <p class="mt-2 font-mono text-lg font-semibold leading-snug text-bone-50" data-field="range">—</p>
+        <p class="mt-1 text-xs text-meteor-500">Primer host – último host</p>
+      </article>
+      <article class="stat border-t-2 border-t-bone-200/60">
+        <p class="eyebrow">Hosts útiles</p>
+        <p class="stat-value" data-field="hosts">—</p>
+        <p class="mt-1 text-xs text-meteor-500">Fórmula 2ⁿ − 2</p>
+      </article>
+    </div>
+
+    <div class="mt-4 grid gap-4 lg:grid-cols-[1.05fr_0.95fr]">
+      <div class="panel p-5 sm:p-6">
+        <h3 class="text-lg font-semibold text-bone-50">Detalle</h3>
+        <dl class="mt-4 grid gap-x-6 gap-y-4 sm:grid-cols-2">
+          <div>
+            <dt class="text-[11px] uppercase tracking-wider text-meteor-500">Máscara</dt>
+            <dd class="mt-1 flex flex-wrap items-baseline gap-2">
+              <span class="mono text-sm text-bone-100" data-field="mask">—</span>
+              <span class="mono text-xs text-ip-blue-soft" data-field="prefix">—</span>
+            </dd>
+          </div>
+          <div>
+            <dt class="text-[11px] uppercase tracking-wider text-meteor-500">Wildcard</dt>
+            <dd class="mono mt-1 text-sm text-bone-100" data-field="wildcard">—</dd>
+          </div>
+          <div>
+            <dt class="text-[11px] uppercase tracking-wider text-meteor-500">Total de direcciones</dt>
+            <dd class="mono mt-1 text-sm text-bone-100" data-field="total">—</dd>
+          </div>
+          <div>
+            <dt class="text-[11px] uppercase tracking-wider text-meteor-500">Bits de red / host</dt>
+            <dd class="mono mt-1 text-sm text-bone-100" data-field="bits">—</dd>
+          </div>
+          <div>
+            <dt class="text-[11px] uppercase tracking-wider text-meteor-500">Clase</dt>
+            <dd class="mt-1 text-sm font-medium text-bone-100" data-field="class">—</dd>
+            <dd class="mt-1 text-xs leading-relaxed text-meteor-500" data-field="class-desc"></dd>
+          </div>
+          <div>
+            <dt class="text-[11px] uppercase tracking-wider text-meteor-500">Ámbito</dt>
+            <dd class="mt-1">
+              <span id="scope-tag" class="tag tag-neutral">
+                <span data-field="scope">—</span>
+              </span>
+            </dd>
+            <dd class="mt-1 text-xs leading-relaxed text-meteor-500" data-field="scope-desc"></dd>
+          </div>
+        </dl>
+        <p id="special-note" class="mt-4 rounded-xl border border-ip-blue/20 bg-ip-blue/[0.06] p-3 text-xs leading-relaxed text-ip-blue-soft" data-field="special-note" hidden></p>
+      </div>
+
+      <div class="panel p-5 sm:p-6">
+        <div class="flex items-center justify-between gap-3">
+          <h3 class="text-lg font-semibold text-bone-50">Lectura binaria</h3>
+          <div class="flex flex-wrap items-center gap-3 text-[10px] uppercase tracking-wider text-meteor-500">
+            <span class="inline-flex items-center gap-1"><span class="dot bg-ip-blue"></span> red</span>
+            <span class="inline-flex items-center gap-1"><span class="dot bg-ip-green"></span> host</span>
+            <span class="inline-flex items-center gap-1"><span class="dot bg-ip-red"></span> broadcast</span>
+          </div>
+        </div>
+        <div class="mt-4 space-y-4">
+          <div>
+            <p class="mb-2 text-[11px] uppercase tracking-wider text-meteor-500">Dirección IP</p>
+            <div class="binary-row" data-binary="ip"></div>
+          </div>
+          <div>
+            <p class="mb-2 text-[11px] uppercase tracking-wider text-meteor-500">Máscara</p>
+            <div class="binary-row" data-binary="mask"></div>
+          </div>
+          <div>
+            <p class="mb-2 text-[11px] uppercase tracking-wider text-meteor-500">Red</p>
+            <div class="binary-row" data-binary="network"></div>
+          </div>
+          <div>
+            <p class="mb-2 text-[11px] uppercase tracking-wider text-meteor-500">Broadcast</p>
+            <div class="binary-row" data-binary="broadcast"></div>
+          </div>
+        </div>
+        <p class="mt-4 text-xs leading-relaxed text-meteor-500">
+          Los bits azules identifican la red y no cambian dentro de la subred.
+          Los bits verdes son los hosts: en el broadcast todos valen 1.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Explorador de subredes -->
+  <section class="container-page mt-8 pb-4">
+    <div class="panel overflow-hidden">
+      <div class="flex flex-col gap-4 border-b border-white/[0.07] p-5 sm:p-6 lg:flex-row lg:items-end lg:justify-between">
+        <div class="max-w-xl">
+          <p class="eyebrow">Explorador</p>
+          <h2 class="mt-1 text-2xl font-semibold text-bone-50">Divide esta red</h2>
+          <p class="mt-2 text-sm leading-relaxed text-meteor-300">
+            Genera subredes iguales a partir de la red calculada. Las filas
+            respetan el orden de direcciones y no se solapan.
+          </p>
+        </div>
+        <div class="tabs" role="tablist" aria-label="Modo de división">
+          <button type="button" role="tab" id="tab-count" data-tab="count" aria-selected="true" aria-controls="panel-count">Por nº de subredes</button>
+          <button type="button" role="tab" id="tab-hosts" data-tab="hosts" aria-selected="false" aria-controls="panel-hosts">Por hosts por subred</button>
+        </div>
+      </div>
+
+      <div class="p-5 sm:p-6">
+        <div id="panel-count" role="tabpanel" aria-labelledby="tab-count">
+          <div class="flex flex-wrap items-end gap-3">
+            <div>
+              <label for="subnet-count" class="label">¿Cuántas subredes necesitas?</label>
+              <input
+                id="subnet-count"
+                type="number"
+                min="1"
+                max="4096"
+                step="1"
+                value="4"
+                class="field w-36"
+                inputmode="numeric"
+              />
+            </div>
+            <p class="pb-3 text-sm text-meteor-400">
+              Se redondea a la siguiente potencia de dos.
+            </p>
+          </div>
+        </div>
+
+        <div id="panel-hosts" role="tabpanel" aria-labelledby="tab-hosts" hidden>
+          <div class="flex flex-wrap items-end gap-3">
+            <div>
+              <label for="subnet-hosts" class="label">¿Cuántos hosts por subred?</label>
+              <input
+                id="subnet-hosts"
+                type="number"
+                min="1"
+                step="1"
+                value="50"
+                class="field w-36"
+                inputmode="numeric"
+              />
+            </div>
+            <p class="pb-3 text-sm text-meteor-400">
+              Se calcula la máscara mínima que acomoda esos hosts.
+            </p>
+          </div>
+        </div>
+
+        <p id="subnet-error" class="error-text" role="alert" hidden></p>
+        <p id="subnet-summary" class="mt-4 rounded-xl border border-ip-blue/15 bg-ip-blue/[0.05] p-3 text-sm text-ip-blue-soft"></p>
+
+        <div class="table-wrap mt-4 max-h-[28rem]">
+          <table class="data-table min-w-[860px]">
+            <thead>
+              <tr>
+                <th class="w-10">#</th>
+                <th>Red</th>
+                <th>Máscara</th>
+                <th>Rango de hosts</th>
+                <th>Broadcast</th>
+                <th class="text-right">Hosts útiles</th>
+              </tr>
+            </thead>
+            <tbody id="subnet-body"></tbody>
+          </table>
+        </div>
+        <p id="subnet-truncated" class="mt-3 text-xs text-meteor-500" hidden></p>
+      </div>
+    </div>
+  </section>
+
+  <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+</Base>
+
+<script>
+  import {
+    IpError,
+    analyzeCidrFromValues,
+    binaryGroups,
+    formatIPv4,
+    parseCidr,
+    parseIPv4,
+    parseMask,
+    parsePrefix,
+    prefixToMask,
+    type CidrAnalysis,
+  } from "../lib/ip";
+  import { planByHostsPerSubnet, planBySubnetCount } from "../lib/subnetting";
+
+  function el<T extends Element>(selector: string): T {
+    const node = document.querySelector<T>(selector);
+    if (!node) throw new Error(`No se encontró el elemento ${selector}`);
+    return node;
+  }
+
+  function messageOf(error: unknown): string {
+    if (error instanceof IpError) return error.message;
+    console.error(error);
+    return "Revisa los datos e inténtalo de nuevo.";
+  }
+
+  const ipInput = el<HTMLInputElement>("#cidr-ip");
+  const prefixInput = el<HTMLInputElement>("#cidr-prefix");
+  const prefixRange = el<HTMLInputElement>("#cidr-prefix-range");
+  const maskInput = el<HTMLInputElement>("#cidr-mask");
+  const ipError = el<HTMLParagraphElement>("#cidr-ip-error");
+  const prefixError = el<HTMLParagraphElement>("#cidr-prefix-error");
+  const maskError = el<HTMLParagraphElement>("#cidr-mask-error");
+  const prefixPanel = el<HTMLDivElement>("#prefix-panel");
+  const maskPanel = el<HTMLDivElement>("#mask-panel");
+  const modeButtons = Array.from(
+    document.querySelectorAll<HTMLButtonElement>("[data-mode]"),
+  );
+  const subnetCount = el<HTMLInputElement>("#subnet-count");
+  const subnetHosts = el<HTMLInputElement>("#subnet-hosts");
+  const subnetBody = el<HTMLTableSectionElement>("#subnet-body");
+  const subnetSummary = el<HTMLParagraphElement>("#subnet-summary");
+  const subnetError = el<HTMLParagraphElement>("#subnet-error");
+  const subnetTruncated = el<HTMLParagraphElement>("#subnet-truncated");
+  const panelCount = el<HTMLDivElement>("#panel-count");
+  const panelHosts = el<HTMLDivElement>("#panel-hosts");
+  const tabButtons = Array.from(
+    document.querySelectorAll<HTMLButtonElement>("[data-tab]"),
+  );
+  const scopeTag = el<HTMLSpanElement>("#scope-tag");
+  const specialNote = el<HTMLParagraphElement>("#special-note");
+  const copyButton = el<HTMLButtonElement>("#cidr-copy");
+  const toast = el<HTMLDivElement>("#toast");
+
+  let mode: "prefix" | "mask" = "prefix";
+  let prefix = 24;
+  let analysis: CidrAnalysis | null = null;
+  let activeTab: "count" | "hosts" = "count";
+  let toastTimer: number | undefined;
+
+  const toneClass: Record<string, string> = {
+    blue: "tag tag-blue",
+    green: "tag tag-green",
+    red: "tag tag-red",
+    neutral: "tag tag-neutral",
+  };
+
+  function setField(name: string, value: string): void {
+    document
+      .querySelectorAll<HTMLElement>(`[data-field="${name}"]`)
+      .forEach((node) => {
+        node.textContent = value;
+      });
+  }
+
+  function inputForError(node: HTMLElement): HTMLInputElement | null {
+    if (node === ipError) return ipInput;
+    if (node === prefixError) return prefixInput;
+    if (node === maskError) return maskInput;
+    return null;
+  }
+
+  function setError(node: HTMLElement, message: string | null): void {
+    node.hidden = message === null;
+    node.textContent = message ?? "";
+    const input = inputForError(node);
+    if (input) {
+      input.classList.toggle("field-invalid", message !== null);
+      input.setAttribute("aria-invalid", message === null ? "false" : "true");
+    }
+  }
+
+  function syncPrefix(next: number): void {
+    prefix = next;
+    prefixInput.value = String(next);
+    prefixRange.value = String(next);
+    prefixRange.style.setProperty(
+      "--range-progress",
+      `${(next / 32) * 100}%`,
+    );
+    maskInput.value = formatIPv4(prefixToMask(next));
+  }
+
+  function setMode(next: "prefix" | "mask"): void {
+    mode = next;
+    modeButtons.forEach((button) => {
+      button.setAttribute(
+        "aria-pressed",
+        button.dataset.mode === next ? "true" : "false",
+      );
+    });
+    prefixPanel.hidden = next !== "prefix";
+    maskPanel.hidden = next !== "mask";
+    if (next === "mask") {
+      maskInput.value = formatIPv4(prefixToMask(prefix));
+    }
+    update();
+  }
+
+  function readPrefix(): number | null {
+    if (mode === "mask") {
+      try {
+        const parsed = parseMask(maskInput.value);
+        setError(maskError, null);
+        return parsed;
+      } catch (error) {
+        setError(maskError, messageOf(error));
+        return null;
+      }
+    }
+
+    try {
+      const parsed = parsePrefix(prefixInput.value);
+      setError(prefixError, null);
+      return parsed;
+    } catch (error) {
+      setError(prefixError, messageOf(error));
+      return null;
+    }
+  }
+
+  function renderBinary(
+    target: string,
+    value: number,
+    bitsInNetwork: number,
+    variant: "address" | "mask" | "broadcast",
+  ): void {
+    const container = el<HTMLDivElement>(`[data-binary="${target}"]`);
+    container.innerHTML = binaryGroups(value)
+      .map((group, groupIndex) => {
+        const bits = group
+          .split("")
+          .map((bit, bitIndex) => {
+            const absoluteIndex = groupIndex * 8 + bitIndex;
+            let color = "";
+            if (variant === "mask") {
+              color = bit === "1" ? "text-bone-200" : "text-meteor-600";
+            } else if (absoluteIndex < bitsInNetwork) {
+              color = "text-ip-blue";
+            } else {
+              color =
+                variant === "broadcast" ? "text-ip-red" : "text-ip-green";
+            }
+            return `<span class="binary-bit ${color} ${bit === "0" ? "opacity-40" : ""}">${bit}</span>`;
+          })
+          .join("");
+        return `<span class="binary-octet">${bits}</span>`;
+      })
+      .join("");
+  }
+
+  function clearResults(): void {
+    [
+      "network",
+      "cidr",
+      "broadcast",
+      "range",
+      "hosts",
+      "mask",
+      "prefix",
+      "wildcard",
+      "total",
+      "bits",
+      "class",
+      "class-desc",
+      "scope",
+      "scope-desc",
+    ].forEach((name) => setField(name, "—"));
+    document
+      .querySelectorAll<HTMLDivElement>("[data-binary]")
+      .forEach((node) => {
+        node.innerHTML = "";
+      });
+    specialNote.hidden = true;
+    scopeTag.className = "tag tag-neutral";
+    subnetBody.innerHTML = "";
+    subnetSummary.textContent = "Corrige la entrada para ver la división.";
+    subnetError.hidden = true;
+    subnetTruncated.hidden = true;
+    copyButton.disabled = true;
+  }
+
+  function render(result: CidrAnalysis): void {
+    setField("network", result.networkText);
+    setField("cidr", `${result.networkText}/${result.prefix}`);
+    setField("broadcast", result.broadcastText);
+    setField(
+      "range",
+      result.firstHostText && result.lastHostText
+        ? `${result.firstHostText} – ${result.lastHostText}`
+        : "No aplica",
+    );
+    setField("hosts", result.usableHosts.toLocaleString("es-MX"));
+    setField("mask", result.maskText);
+    setField("prefix", `/${result.prefix}`);
+    setField("wildcard", result.wildcardText);
+    setField(
+      "total",
+      result.totalAddresses.toLocaleString("es-MX"),
+    );
+    setField("bits", `${result.networkBits} de red · ${result.hostBits} de host`);
+    setField("class", `${result.ipClass.letter} — ${result.ipClass.name}`);
+    setField("class-desc", result.ipClass.description);
+    setField("scope", result.scope.label);
+    setField("scope-desc", result.scope.description);
+    scopeTag.className = toneClass[result.scope.tone] ?? "tag tag-neutral";
+
+    if (result.specialNote) {
+      setField("special-note", result.specialNote);
+      specialNote.hidden = false;
+    } else {
+      specialNote.hidden = true;
+    }
+
+    renderBinary("ip", result.ip, result.prefix, "address");
+    renderBinary("mask", result.mask, result.prefix, "mask");
+    renderBinary("network", result.network, result.prefix, "address");
+    renderBinary("broadcast", result.broadcast, result.prefix, "broadcast");
+    copyButton.disabled = false;
+  }
+
+  function update(): void {
+    const parsedPrefix = readPrefix();
+    if (parsedPrefix === null) return;
+
+    if (parsedPrefix !== prefix) {
+      syncPrefix(parsedPrefix);
+    }
+
+    try {
+      const ip = parseIPv4(ipInput.value);
+      setError(ipError, null);
+      analysis = analyzeCidrFromValues(ip, parsedPrefix);
+      render(analysis);
+      updateSubnets();
+    } catch (error) {
+      setError(ipError, messageOf(error));
+      analysis = null;
+      clearResults();
+    }
+  }
+
+  function renderSubnetTable(
+    blocks: ReturnType<typeof planBySubnetCount>["blocks"],
+    truncated: boolean,
+    generated: number,
+  ): void {
+    subnetBody.innerHTML = blocks
+      .map(
+        (block) => `
+        <tr>
+          <td class="mono text-meteor-500">${block.index + 1}</td>
+          <td class="mono whitespace-nowrap text-bone-100">${block.cidr}</td>
+          <td class="mono whitespace-nowrap text-meteor-300">${block.maskText}</td>
+          <td class="mono whitespace-nowrap text-meteor-200">${block.firstHostText ?? "—"} – ${block.lastHostText ?? "—"}</td>
+          <td class="mono whitespace-nowrap text-ip-red-soft">${block.broadcastText}</td>
+          <td class="mono text-right text-bone-100">${block.usableHosts}</td>
+        </tr>`,
+      )
+      .join("");
+
+    subnetTruncated.hidden = !truncated;
+    subnetTruncated.textContent = truncated
+      ? `Mostrando las primeras ${blocks.length} de ${generated} subredes para mantener la tabla ligera.`
+      : "";
+  }
+
+  function updateSubnets(): void {
+    if (!analysis) return;
+    subnetError.hidden = true;
+    subnetTruncated.hidden = true;
+
+    try {
+      if (activeTab === "count") {
+        const requested = Number(subnetCount.value);
+        const plan = planBySubnetCount(
+          analysis.network,
+          analysis.prefix,
+          requested,
+          128,
+        );
+        const extra =
+          plan.requestedCount !== plan.generated
+            ? ` Pediste ${plan.requestedCount}; como debe ser potencia de dos, se generan ${plan.generated}.`
+            : "";
+        subnetSummary.textContent = `Se generan ${plan.generated} subredes de /${plan.prefix} con ${plan.usableHosts} hosts útiles cada una.${extra}`;
+        renderSubnetTable(plan.blocks, plan.truncated, plan.generated);
+      } else {
+        const requested = Number(subnetHosts.value);
+        const plan = planByHostsPerSubnet(
+          analysis.network,
+          analysis.prefix,
+          requested,
+          128,
+        );
+        subnetSummary.textContent = `Cada subred usa /${plan.prefix} y ofrece ${plan.usableHosts} hosts útiles. En la red base caben ${plan.generated} subredes de ese tamaño.`;
+        renderSubnetTable(plan.blocks, plan.truncated, plan.generated);
+      }
+    } catch (error) {
+      subnetBody.innerHTML = "";
+      subnetSummary.textContent = "";
+      subnetTruncated.hidden = true;
+      subnetError.hidden = false;
+      subnetError.textContent = messageOf(error);
+    }
+  }
+
+  function absorbCidr(): void {
+    const raw = ipInput.value.trim();
+    if (!raw.includes("/")) return;
+    try {
+      const parsed = parseCidr(raw);
+      ipInput.value = formatIPv4(parsed.address);
+      syncPrefix(parsed.prefix);
+      if (mode !== "prefix") {
+        setMode("prefix");
+      } else {
+        update();
+      }
+    } catch (error) {
+      setError(ipError, messageOf(error));
+    }
+  }
+
+  async function copyText(text: string): Promise<void> {
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch {
+      const area = document.createElement("textarea");
+      area.value = text;
+      area.style.position = "fixed";
+      area.style.opacity = "0";
+      document.body.appendChild(area);
+      area.select();
+      document.execCommand("copy");
+      area.remove();
+    }
+    showToast("Resumen copiado al portapapeles");
+  }
+
+  function showToast(message: string): void {
+    toast.textContent = message;
+    toast.hidden = false;
+    window.clearTimeout(toastTimer);
+    toastTimer = window.setTimeout(() => {
+      toast.hidden = true;
+    }, 2400);
+  }
+
+  function summaryText(result: CidrAnalysis): string {
+    return [
+      "Calculadora IP — CIDR",
+      `Entrada: ${result.ipText}/${result.prefix}`,
+      `Red: ${result.networkText}/${result.prefix}`,
+      `Máscara: ${result.maskText} (/${result.prefix})`,
+      `Wildcard: ${result.wildcardText}`,
+      `Rango de hosts: ${result.firstHostText ?? "—"} – ${result.lastHostText ?? "—"}`,
+      `Broadcast: ${result.broadcastText}`,
+      `Hosts útiles: ${result.usableHosts}`,
+      `Total de direcciones: ${result.totalAddresses}`,
+      `Clase: ${result.ipClass.letter} (${result.ipClass.name})`,
+      `Ámbito: ${result.scope.label}`,
+    ].join("\n");
+  }
+
+  ipInput.addEventListener("input", update);
+  ipInput.addEventListener("change", absorbCidr);
+  ipInput.addEventListener("paste", () => window.setTimeout(absorbCidr, 0));
+  prefixInput.addEventListener("input", update);
+  maskInput.addEventListener("input", update);
+  prefixRange.addEventListener("input", () => {
+    syncPrefix(Number(prefixRange.value));
+    update();
+  });
+
+  document
+    .querySelectorAll<HTMLButtonElement>("[data-prefix-shortcut]")
+    .forEach((button) => {
+      button.addEventListener("click", () => {
+        const value = Number(button.dataset.prefixShortcut);
+        syncPrefix(value);
+        update();
+      });
+    });
+
+  modeButtons.forEach((button) => {
+    button.addEventListener("click", () => {
+      setMode(button.dataset.mode === "mask" ? "mask" : "prefix");
+    });
+  });
+
+  document
+    .querySelectorAll<HTMLButtonElement>("[data-example-ip]")
+    .forEach((button) => {
+      button.addEventListener("click", () => {
+        ipInput.value = button.dataset.exampleIp ?? "";
+        syncPrefix(Number(button.dataset.examplePrefix ?? "24"));
+        if (mode === "prefix") {
+          update();
+        } else {
+          setMode("prefix");
+        }
+      });
+    });
+
+  tabButtons.forEach((button) => {
+    button.addEventListener("click", () => {
+      activeTab = button.dataset.tab === "hosts" ? "hosts" : "count";
+      tabButtons.forEach((item) => {
+        item.setAttribute(
+          "aria-selected",
+          item.dataset.tab === activeTab ? "true" : "false",
+        );
+      });
+      panelCount.hidden = activeTab !== "count";
+      panelHosts.hidden = activeTab !== "hosts";
+      updateSubnets();
+    });
+  });
+
+  subnetCount.addEventListener("input", updateSubnets);
+  subnetHosts.addEventListener("input", updateSubnets);
+
+  copyButton.addEventListener("click", () => {
+    if (analysis) void copyText(summaryText(analysis));
+  });
+
+  syncPrefix(24);
+  update();
+</script>

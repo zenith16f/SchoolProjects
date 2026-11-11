@@ -1,0 +1,36 @@
+{
+  "name": "calculadora-ip",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Calculadora IP CIDR y VLSM — Proyecto 2, Redes de Computadoras (ESCOM-IPN)",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "check": "astro check",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "serve": "node scripts/serve.mjs",
+    "resultados": "tsx scripts/export-results.ts",
+    "doc": "tsx scripts/export-results.ts && node scripts/build-doc.mjs",
+    "empaquetar": "node scripts/empaquetar.mjs"
+  },
+  "dependencies": {
+    "@fontsource-variable/inter": "^5.3.0",
+    "@fontsource-variable/jetbrains-mono": "^5.3.0",
+    "@fontsource-variable/space-grotesk": "^5.3.0",
+    "astro": "^6.4.8",
+    "tailwindcss": "^4.3.5"
+  },
+  "devDependencies": {
+    "@astrojs/check": "^0.9.12",
+    "@tailwindcss/postcss": "^4.3.5",
+    "@types/node": "^26.6.6",
+    "playwright-core": "^1.65.0",
+    "sharp": "^0.35.5",
+    "tsx": "^4.23.15",
+    "typescript": "~5.9.3",
+    "vitest": "^5.1.0"
+  }
+}

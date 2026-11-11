@@ -1,0 +1,41 @@
+---
+const year = new Date().getFullYear();
+---
+
+<footer class="mt-24 border-t border-white/[0.06] py-10">
+  <div class="container-page grid gap-8 sm:grid-cols-[1fr_auto] sm:items-start">
+    <div>
+      <div class="flex items-center gap-3">
+        <svg viewBox="0 0 32 32" class="h-8 w-8" aria-hidden="true">
+          <rect x="1" y="1" width="30" height="30" rx="9" fill="#232930" stroke="rgba(244,240,228,0.14)"></rect>
+          <path d="M9 11h14M9 21h14M11 9v14M21 9v14" stroke="rgba(244,240,228,0.14)" stroke-width="1"></path>
+          <circle cx="9" cy="11" r="2.7" fill="#6c9fe8"></circle>
+          <circle cx="23" cy="11" r="2.7" fill="#6cc28c"></circle>
+          <circle cx="9" cy="21" r="2.7" fill="#e57a70"></circle>
+          <circle cx="23" cy="21" r="2.7" fill="#f4f0e4"></circle>
+        </svg>
+        <div>
+          <p class="font-display text-sm font-semibold text-bone-100">Calculadora IP — CIDR y VLSM</p>
+          <p class="text-xs text-meteor-500">Proyecto 2 · Redes de Computadoras</p>
+        </div>
+      </div>
+      <p class="mt-4 max-w-md text-sm leading-relaxed text-meteor-400">
+        Herramienta académica de la Escuela Superior de Cómputo (IPN). Todos los
+        cálculos se ejecutan en tu navegador: no se envía ninguna dirección a un
+        servidor.
+      </p>
+    </div>
+
+    <nav aria-label="Enlaces del pie" class="grid gap-2 text-sm">
+      <a href="/cidr/" class="text-meteor-300 transition hover:text-bone-50">Calculadora CIDR</a>
+      <a href="/vlsm/" class="text-meteor-300 transition hover:text-bone-50">Calculadora VLSM</a>
+      <a href="/guia/" class="text-meteor-300 transition hover:text-bone-50">Guía y casos de prueba</a>
+      <a href="/guia/#algoritmo" class="text-meteor-300 transition hover:text-bone-50">Algoritmo VLSM</a>
+    </nav>
+  </div>
+
+  <div class="container-page mt-8 flex flex-col gap-2 border-t border-white/[0.06] pt-6 text-xs text-meteor-500 sm:flex-row sm:items-center sm:justify-between">
+    <p>ESCOM · Instituto Politécnico Nacional · {year}</p>
+    <p>Astro + TypeScript + Tailwind CSS</p>
+  </div>
+</footer>

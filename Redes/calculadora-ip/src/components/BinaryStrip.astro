@@ -1,0 +1,47 @@
+---
+import { binaryGroups } from "../lib/ip";
+
+interface Props {
+  value: number;
+  prefix: number;
+  variant?: "address" | "mask" | "broadcast";
+  label?: string;
+}
+
+const { value, prefix, variant = "address", label = "Representación binaria" } =
+  Astro.props;
+
+const groups = binaryGroups(value);
+const plain = groups.join(" ");
+---
+
+<div class="binary-row" role="img" aria-label={`${label}: ${plain}`}>
+  {
+    groups.map((group, groupIndex) => (
+      <span class="binary-octet">
+        {group.split("").map((bit, bitIndex) => {
+          const absoluteIndex = groupIndex * 8 + bitIndex;
+          let color = "";
+          if (variant === "mask") {
+            color = bit === "1" ? "text-bone-200" : "text-meteor-600";
+          } else if (absoluteIndex < prefix) {
+            color = "text-ip-blue";
+          } else {
+            color = variant === "broadcast" ? "text-ip-red" : "text-ip-green";
+          }
+          return (
+            <span
+              class:list={[
+                "binary-bit",
+                color,
+                bit === "0" ? "opacity-40" : "",
+              ]}
+            >
+              {bit}
+            </span>
+          );
+        })}
+      </span>
+    ))
+  }
+</div>

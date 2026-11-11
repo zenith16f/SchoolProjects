@@ -1,0 +1,37 @@
+{
+  "equipo": "Equipo X",
+  "numero": "X",
+  "materia": "Redes de Computadoras",
+  "modulo": "Módulo 2 · Direccionamiento IPv4",
+  "profesor": "Nombre del profesor",
+  "grupo": "X",
+  "semestre": "2026-2",
+  "fecha": "10 de noviembre de 2026",
+  "repositorio": "https://github.com/usuario/calculadora-ip",
+  "integrantes": [
+    {
+      "nombre": "Integrante 1",
+      "matricula": "0000000000",
+      "correo": "integrante1@alumno.ipn.mx",
+      "rol": "Lógica CIDR y validaciones"
+    },
+    {
+      "nombre": "Integrante 2",
+      "matricula": "0000000000",
+      "correo": "integrante2@alumno.ipn.mx",
+      "rol": "Algoritmo VLSM y pruebas"
+    },
+    {
+      "nombre": "Integrante 3",
+      "matricula": "0000000000",
+      "correo": "integrante3@alumno.ipn.mx",
+      "rol": "Interfaz, diseño y accesibilidad"
+    },
+    {
+      "nombre": "Integrante 4",
+      "matricula": "0000000000",
+      "correo": "integrante4@alumno.ipn.mx",
+      "rol": "Documentación, empaquetado y video"
+    }
+  ]
+}
